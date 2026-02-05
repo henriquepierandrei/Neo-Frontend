@@ -9,6 +9,7 @@ import {
   Music2
 } from 'lucide-react';
 import GridBackground from './GridBackground';
+import NeonButton from '../NeoButton';
 
 const HeroSection: React.FC = () => {
   // Avatares para Social Proof
@@ -145,12 +146,7 @@ const HeroSection: React.FC = () => {
           </button>
 
           {/* Botão Secundário */}
-          <button className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[var(--color-text)] rounded-full overflow-hidden transition-all duration-300 hover:scale-105">
-            <div className="absolute inset-0 bg-white/5 backdrop-blur-xl border border-[var(--color-border)] rounded-full group-hover:bg-white/10  transition-all duration-300" />
-            <div className="absolute inset-[1px] rounded-full bg-gradient-to-b from-white/10 to-transparent opacity-50" />
-            <Play className="relative w-4 h-4 fill-current" />
-            <span className="relative">Ver Exemplos</span>
-          </button>
+          <NeonButton />
         </div>
 
         {/* Social Proof */}
@@ -202,99 +198,99 @@ const HeroSection: React.FC = () => {
 
         {/* Cards de Recursos */}
         <div className="max-w-5xl mx-auto">
-        {/* Header da seção (opcional) */}
-        <div className="text-center mb-12 md:mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-[var(--color-text)] mb-4">
-            Recursos Incríveis
-          </h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Tudo o que você precisa para criar o perfil perfeito
-          </p>
-        </div>
+          {/* Header da seção (opcional) */}
+          <div className="text-center mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-[var(--color-text)] mb-4">
+              Recursos Incríveis
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Tudo o que você precisa para criar o perfil perfeito
+            </p>
+          </div>
 
-        {/* Grid de Cards 2x2 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 cursor-pointer nh">
-          {features.map((feature, index) => (
-            <div 
-              key={index} 
-              className="relative group"
-            >
-              {/* Badge Numérica */}
-              <div 
-                className="absolute -top-3 -left-3 z-20 w-11 h-11 rounded-full flex items-center justify-center
+          {/* Grid de Cards 2x2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 cursor-pointer nh">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="relative group"
+              >
+                {/* Badge Numérica */}
+                <div
+                  className="absolute -top-3 -left-3 z-20 w-11 h-11 rounded-full flex items-center justify-center
                  font-bold text-lg text-white shadow-lg transition-transform duration-300 group-hover:scale-110 "
-                style={{ 
-                  backgroundColor: '#2563eb',
-                  boxShadow: '0 4px 20px rgba(37, 99, 235, 0.4)'
-                }}
-              >
-                {feature.number}
-              </div>
-              
-              {/* Card Container */}
-              <div 
-                className="relative overflow-hidden rounded-2xl p-6 pt-7 h-full transition-all duration-300 ease-out group-hover:translate-y-[-2px]"
-                style={{ 
-                  backgroundColor: 'var(--card-background-glass)',
-                  border: '1px solid var(--color-border)',
-                }}
-              >
-                {/* Hover Border Glow */}
-                <div 
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                   style={{
-                    border: '1px solid rgba(37, 99, 235, 0.3)',
-                    boxShadow: '0 0 30px rgba(37, 99, 235, 0.1)'
+                    backgroundColor: '#2563eb',
+                    boxShadow: '0 4px 20px rgba(37, 99, 235, 0.4)'
                   }}
-                />
-
-                {/* Subtle Gradient Overlay on Hover */}
-                <div 
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(ellipse at top left, rgba(37, 99, 235, 0.05) 0%, transparent 50%)'
-                  }}
-                />
-
-                {/* Content */}
-                <div className="relative z-10">
-                  {/* Ícone + Título */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div 
-                      className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-105"
-                      style={{ backgroundColor: 'rgba(37, 99, 235, 0.15)' }}
-                    >
-                      <feature.icon 
-                        className="w-5 h-5 transition-colors duration-300" 
-                        style={{ color: '#3b82f6' }}
-                      />
-                    </div>
-                    <h3 className="text-[var(--color-text)] font-bold text-lg tracking-tight">
-                      {feature.title}
-                    </h3>
-                  </div>
-                  
-                  {/* Descrição */}
-                  <p 
-                    className="text-sm leading-relaxed"
-                    style={{ color: '#71717a' }}
-                  >
-                    {feature.description}
-                  </p>
+                >
+                  {feature.number}
                 </div>
 
-                {/* Corner Decoration */}
-                <div 
-                  className="absolute bottom-0 right-0 w-24 h-24 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                {/* Card Container */}
+                <div
+                  className="relative overflow-hidden rounded-2xl p-6 pt-7 h-full transition-all duration-300 ease-out group-hover:translate-y-[-2px]"
                   style={{
-                    background: 'radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.08) 0%, transparent 70%)'
+                    backgroundColor: 'var(--card-background-glass)',
+                    border: '1px solid var(--color-border)',
                   }}
-                />
+                >
+                  {/* Hover Border Glow */}
+                  <div
+                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    style={{
+                      border: '1px solid rgba(37, 99, 235, 0.3)',
+                      boxShadow: '0 0 30px rgba(37, 99, 235, 0.1)'
+                    }}
+                  />
+
+                  {/* Subtle Gradient Overlay on Hover */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{
+                      background: 'radial-gradient(ellipse at top left, rgba(37, 99, 235, 0.05) 0%, transparent 50%)'
+                    }}
+                  />
+
+                  {/* Content */}
+                  <div className="relative z-10">
+                    {/* Ícone + Título */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-105"
+                        style={{ backgroundColor: 'rgba(37, 99, 235, 0.15)' }}
+                      >
+                        <feature.icon
+                          className="w-5 h-5 transition-colors duration-300"
+                          style={{ color: '#3b82f6' }}
+                        />
+                      </div>
+                      <h3 className="text-[var(--color-text)] font-bold text-lg tracking-tight">
+                        {feature.title}
+                      </h3>
+                    </div>
+
+                    {/* Descrição */}
+                    <p
+                      className="text-sm leading-relaxed"
+                      style={{ color: '#71717a' }}
+                    >
+                      {feature.description}
+                    </p>
+                  </div>
+
+                  {/* Corner Decoration */}
+                  <div
+                    className="absolute bottom-0 right-0 w-24 h-24 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{
+                      background: 'radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.08) 0%, transparent 70%)'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
         {/* Bottom Decorative Line */}
         <div className="mt-16 flex justify-center">

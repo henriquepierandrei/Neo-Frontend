@@ -64,6 +64,8 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+
 }
 
 html {
@@ -71,7 +73,6 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
   background-color: var(--color-background);
   color: var(--color-text);
   line-height: 1.6;
@@ -100,7 +101,8 @@ body {
 
 /* Glass Card Effect */
 .glass-card {
-  background: var(--card-background-glass);;
+  background: var(--card-background-glass);
+  ;
   backdrop-filter: blur(var(--blur-amount));
   -webkit-backdrop-filter: blur(var(--blur-amount));
   border: 1px solid var(--color-border);
