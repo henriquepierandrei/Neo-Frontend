@@ -1,14 +1,14 @@
 import React from 'react';
 import {
   Link2,
-  BarChart3,
   DollarSign,
-  Sparkles,
   ArrowRight,
   Play,
   Zap,
-  Heart
+  Heart,
+  Music2
 } from 'lucide-react';
+import GridBackground from './GridBackground';
 
 const HeroSection: React.FC = () => {
   // Avatares para Social Proof
@@ -28,25 +28,37 @@ const HeroSection: React.FC = () => {
       description: 'Divulgue quantas redes sociais desejar no seu perfil divulgando tudo em um só link.',
       gradient: 'from-blue-500/20 to-cyan-500/20',
       iconColor: 'text-blue-400',
+      number: '01',
     },
     {
-      icon: BarChart3,
+      icon: Music2,
       title: 'Músicas e Vídeos',
       description: 'Personalize com músicas, vídeos do YouTub e plano de fundo animados.',
       gradient: 'from-purple-500/20 to-pink-500/20',
       iconColor: 'text-purple-400',
+      number: '02',
     },
     {
       icon: DollarSign,
       title: 'Monetização',
       description: 'Venda produtos direto pelo seu link.',
-      gradient: 'from-emerald-500/20 to-teal-500/20',
-      iconColor: 'text-emerald-400',
+      gradient: 'from-purple-500/20 to-pink-500/20',
+      iconColor: 'text-purple-400',
+      number: '03',
+    },
+    {
+      icon: DollarSign,
+      title: 'Planos Premium',
+      description: 'Recursos exclusivos como álbuns de fotos e insígnias especiais.',
+      gradient: 'from-purple-500/20 to-pink-500/20',
+      iconColor: 'text-purple-400',
+      number: '04',
     },
   ];
 
   return (
     <section className="relative min-h-screen bg-[var(--color-background)] overflow-hidden">
+      <GridBackground />
       {/* Background Glow Effects */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Glow Principal - Topo */}
@@ -189,126 +201,100 @@ const HeroSection: React.FC = () => {
         </div>
 
         {/* Cards de Recursos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="max-w-5xl mx-auto">
+        {/* Header da seção (opcional) */}
+        <div className="text-center mb-12 md:mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-[var(--color-text)] mb-4">
+            Recursos Incríveis
+          </h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Tudo o que você precisa para criar o perfil perfeito
+          </p>
+        </div>
+
+        {/* Grid de Cards 2x2 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 cursor-pointer nh">
           {features.map((feature, index) => (
-            <div
-              key={index}
-              className="group relative"
+            <div 
+              key={index} 
+              className="relative group"
             >
-              {/* Card Container */}
-              <div
-                className="relative p-8 overflow-hidden transition-all duration-700 ease-out hover:scale-[1.03] cursor-pointer h-full flex flex-col"
-                style={{ borderRadius: 'var(--border-radius-xl)' }}
+              {/* Badge Numérica */}
+              <div 
+                className="absolute -top-3 -left-3 z-20 w-11 h-11 rounded-full flex items-center justify-center
+                 font-bold text-lg text-white shadow-lg transition-transform duration-300 group-hover:scale-110 "
+                style={{ 
+                  backgroundColor: '#2563eb',
+                  boxShadow: '0 4px 20px rgba(37, 99, 235, 0.4)'
+                }}
               >
-                {/* Layered Backgrounds */}
-                <div
-                  className="absolute inset-0 backdrop-blur-2xl border transition-all duration-700 group-hover:border-opacity-80"
+                {feature.number}
+              </div>
+              
+              {/* Card Container */}
+              <div 
+                className="relative overflow-hidden rounded-2xl p-6 pt-7 h-full transition-all duration-300 ease-out group-hover:translate-y-[-2px]"
+                style={{ 
+                  backgroundColor: 'var(--card-background-glass)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                {/* Hover Border Glow */}
+                <div 
+                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                   style={{
-                    background: 'var(--color-surface)',
-                    borderColor: 'var(--color-border)',
-                    borderRadius: 'var(--border-radius-xl)'
+                    border: '1px solid rgba(37, 99, 235, 0.3)',
+                    boxShadow: '0 0 30px rgba(37, 99, 235, 0.1)'
                   }}
                 />
 
-                {/* Animated Gradient Overlay */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-[0.15] transition-all duration-700 ease-out`}
-                  style={{ borderRadius: 'var(--border-radius-xl)' }}
-                />
-
-                {/* Glow Effect */}
-                <div
-                  className={`absolute -inset-[1px] bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-20 blur-xl transition-all duration-700`}
-                  style={{ borderRadius: 'var(--border-radius-xl)' }}
-                />
-
-                {/* Top Shine */}
-                <div
-                  className="absolute top-0 inset-x-0 h-px opacity-60"
+                {/* Subtle Gradient Overlay on Hover */}
+                <div 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                   style={{
-                    background: 'linear-gradient(90deg, transparent, var(--color-border), transparent)'
+                    background: 'radial-gradient(ellipse at top left, rgba(37, 99, 235, 0.05) 0%, transparent 50%)'
                   }}
                 />
 
-                {/* Side Accent Line */}
-                <div
-                  className={`absolute left-0 top-8 bottom-8 w-[2px] bg-gradient-to-b ${feature.gradient} opacity-0 group-hover:opacity-100 transition-all duration-500 delay-100`}
-                />
-
-                {/* Content Container */}
-                <div className="relative z-10 flex flex-col h-full">
-                  {/* Icon with Animated Background */}
-                  <div className="relative mb-6 inline-flex w-fit">
-                    {/* Icon Glow */}
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} blur-lg opacity-0 group-hover:opacity-60 transition-all duration-500 scale-150`}
-                      style={{ borderRadius: 'var(--border-radius-md)' }}
-                    />
-
-                    {/* Icon Container */}
-                    <div
-                      className={`relative flex items-center justify-center w-14 h-14 bg-gradient-to-br ${feature.gradient} shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 ease-out`}
-                      style={{ borderRadius: 'var(--border-radius-md)' }}
+                {/* Content */}
+                <div className="relative z-10">
+                  {/* Ícone + Título */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div 
+                      className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-105"
+                      style={{ backgroundColor: 'rgba(37, 99, 235, 0.15)' }}
                     >
-                      <feature.icon className={`w-7 h-7 ${feature.iconColor} drop-shadow-lg`} />
+                      <feature.icon 
+                        className="w-5 h-5 transition-colors duration-300" 
+                        style={{ color: '#3b82f6' }}
+                      />
                     </div>
-                  </div>
-
-                  {/* Text Content */}
-                  <div className="flex-1">
-                    {/* Title */}
-                    <h3
-                      className="text-xl font-bold mb-3 group-hover:translate-x-1 transition-transform duration-500"
-                      style={{ color: 'var(--color-text)' }}
-                    >
+                    <h3 className="text-[var(--color-text)] font-bold text-lg tracking-tight">
                       {feature.title}
                     </h3>
-
-                    {/* Description */}
-                    <p
-                      className="text-sm leading-relaxed transition-colors duration-500"
-                      style={{
-                        color: 'var(--color-text-muted)',
-                      }}
-                    >
-                      {feature.description}
-                    </p>
                   </div>
-
-                  {/* CTA with Arrow Animation */}
-                  <div className="mt-6 flex items-center gap-2 text-sm font-semibold">
-                    <span
-                      className={`${feature.iconColor} opacity-0 group-hover:opacity-100 transition-all duration-500 delay-150 -translate-x-2 group-hover:translate-x-0`}
-                    >
-                      Saiba mais
-                    </span>
-                    <ArrowRight
-                      className={`w-4 h-4 ${feature.iconColor} opacity-0 group-hover:opacity-100 transition-all duration-500 delay-200 -translate-x-4 group-hover:translate-x-0 group-hover:translate-x-1`}
-                    />
-                  </div>
+                  
+                  {/* Descrição */}
+                  <p 
+                    className="text-sm leading-relaxed"
+                    style={{ color: '#71717a' }}
+                  >
+                    {feature.description}
+                  </p>
                 </div>
 
-                {/* Bottom Right Decorative Element */}
-                <div className="absolute bottom-0 right-0 w-32 h-32 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-tl ${feature.gradient} opacity-5 rounded-tl-[4rem]`}
-                  />
-                </div>
-
-                {/* Animated Particle Effect */}
-                <div
-                  className="absolute inset-0 overflow-hidden pointer-events-none"
-                  style={{ borderRadius: 'var(--border-radius-xl)' }}
-                >
-                  <div
-                    className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000 group-hover:animate-ping"
-                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)' }}
-                  />
-                </div>
+                {/* Corner Decoration */}
+                <div 
+                  className="absolute bottom-0 right-0 w-24 h-24 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.08) 0%, transparent 70%)'
+                  }}
+                />
               </div>
             </div>
           ))}
         </div>
+      </div>
 
         {/* Bottom Decorative Line */}
         <div className="mt-16 flex justify-center">
