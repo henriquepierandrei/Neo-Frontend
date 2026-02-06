@@ -1,14 +1,12 @@
 // pages/Tags/Tags.tsx
-import { useState, useMemo } from "react";
+
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Tag,
   ChevronRight,
   Search,
-  Crown,
-  Lock,
   Check,
-  Sparkles,
   X,
   ChevronDown,
   ChevronUp,
@@ -23,18 +21,20 @@ import {
   CheckCircle,
   Eye,
   RotateCcw,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
+import { tagService } from "../../services/tagService";
 
 // ═══════════════════════════════════════════════════════════
 // TIPOS
 // ═══════════════════════════════════════════════════════════
 
 interface TagItem {
-  id: string;
+  id: number; // ✅ ID do banco (Long -> number)
   name: string;
   emoji: string;
   category: string;
-  isPremium: boolean;
 }
 
 interface Category {
@@ -45,7 +45,7 @@ interface Category {
 }
 
 // ═══════════════════════════════════════════════════════════
-// DADOS
+// DADOS - Tags mapeadas com IDs do banco de dados
 // ═══════════════════════════════════════════════════════════
 
 const categories: Category[] = [
@@ -58,80 +58,81 @@ const categories: Category[] = [
   { id: "other", name: "Outros", icon: Globe, color: "#F39C12" },
 ];
 
+// ✅ Tags com IDs do banco de dados (conforme o DB fornecido)
 const allTags: TagItem[] = [
   // Personalidade
-  { id: "1", name: "Paz", emoji: "☮️", category: "personality", isPremium: false },
-  { id: "2", name: "Bonito(a)", emoji: "✨", category: "personality", isPremium: true },
-  { id: "3", name: "Picante", emoji: "🌶️", category: "personality", isPremium: true },
-  { id: "4", name: "Adorável", emoji: "🥰", category: "personality", isPremium: false },
-  { id: "5", name: "Perigoso(a)", emoji: "⚠️", category: "personality", isPremium: true },
-  { id: "6", name: "Provocante", emoji: "😏", category: "personality", isPremium: true },
-  { id: "7", name: "Frio", emoji: "🥶", category: "personality", isPremium: false },
-  { id: "8", name: "Pensativo(a)", emoji: "🤔", category: "personality", isPremium: false },
-  { id: "9", name: "Comunicativo(a)", emoji: "🗣️", category: "personality", isPremium: false },
-  { id: "10", name: "Apaixonado(a)", emoji: "😍", category: "personality", isPremium: true },
-  { id: "11", name: "Tímido(a)", emoji: "😊", category: "personality", isPremium: false },
-  { id: "12", name: "Triste", emoji: "😢", category: "personality", isPremium: false },
-  { id: "13", name: "Bravo(a)", emoji: "😤", category: "personality", isPremium: false },
-  { id: "14", name: "Amigável", emoji: "🤗", category: "personality", isPremium: false },
-  { id: "15", name: "Tóxico(a)", emoji: "☠️", category: "personality", isPremium: true },
-  { id: "16", name: "Anjo(a)", emoji: "😇", category: "personality", isPremium: true },
-  { id: "17", name: "Palhaço(a)", emoji: "🤡", category: "personality", isPremium: false },
+  { id: 1, name: "Paz", emoji: "☮️", category: "personality" },
+  { id: 20, name: "Bonito(a)", emoji: "✨", category: "personality" },
+  { id: 21, name: "Picante", emoji: "🌶️", category: "personality" },
+  { id: 23, name: "Adorável", emoji: "🥰", category: "personality" },
+  { id: 28, name: "Perigoso(a)", emoji: "⚠️", category: "personality" },
+  { id: 30, name: "Provocante", emoji: "😏", category: "personality" },
+  { id: 32, name: "Frio", emoji: "🥶", category: "personality" },
+  { id: 40, name: "Pensativo(a)", emoji: "🤔", category: "personality" },
+  { id: 41, name: "Comunicativo(a)", emoji: "🗣️", category: "personality" },
+  { id: 43, name: "Apaixonado(a)", emoji: "😍", category: "personality" },
+  { id: 46, name: "Tímido(a)", emoji: "😊", category: "personality" },
+  { id: 47, name: "Triste", emoji: "😢", category: "personality" },
+  { id: 48, name: "Bravo(a)", emoji: "😤", category: "personality" },
+  { id: 49, name: "Amigável", emoji: "🤗", category: "personality" },
+  { id: 39, name: "Tóxico(a)", emoji: "☠️", category: "personality" },
+  { id: 27, name: "Anjo(a)", emoji: "😇", category: "personality" },
+  { id: 33, name: "Palhaço(a)", emoji: "🤡", category: "personality" },
 
   // Profissão
-  { id: "18", name: "Programador", emoji: "💻", category: "profession", isPremium: false },
-  { id: "19", name: "Artista", emoji: "🎨", category: "profession", isPremium: false },
-  { id: "20", name: "Designer", emoji: "🖌️", category: "profession", isPremium: false },
-  { id: "21", name: "Escritor", emoji: "✍️", category: "profession", isPremium: false },
-  { id: "22", name: "Investidor", emoji: "📈", category: "profession", isPremium: true },
-  { id: "23", name: "Músico", emoji: "🎵", category: "profession", isPremium: false },
-  { id: "24", name: "Fotógrafo", emoji: "📸", category: "profession", isPremium: false },
-  { id: "25", name: "Produtor(a)", emoji: "🎬", category: "profession", isPremium: true },
-  { id: "26", name: "Construtor(a)", emoji: "🔧", category: "profession", isPremium: false },
-  { id: "27", name: "Cybersecurity", emoji: "🔐", category: "profession", isPremium: true },
-  { id: "28", name: "Negócios", emoji: "💼", category: "profession", isPremium: true },
-  { id: "29", name: "Ciência", emoji: "🔬", category: "profession", isPremium: false },
+  { id: 2, name: "Programador", emoji: "💻", category: "profession" },
+  { id: 3, name: "Artista", emoji: "🎨", category: "profession" },
+  { id: 4, name: "Designer", emoji: "🖌️", category: "profession" },
+  { id: 5, name: "Escritor", emoji: "✍️", category: "profession" },
+  { id: 6, name: "Investidor", emoji: "📈", category: "profession" },
+  { id: 7, name: "Músico", emoji: "🎵", category: "profession" },
+  { id: 8, name: "Fotógrafo", emoji: "📸", category: "profession" },
+  { id: 24, name: "Produtor(a)", emoji: "🎬", category: "profession" },
+  { id: 50, name: "Construtor(a)", emoji: "🔧", category: "profession" },
+  { id: 60, name: "Cybersecurity", emoji: "🔐", category: "profession" },
+  { id: 15, name: "Negócios", emoji: "💼", category: "profession" },
+  { id: 19, name: "Ciência", emoji: "🔬", category: "profession" },
 
   // Hobbies & Esportes
-  { id: "30", name: "Ar Livre", emoji: "🏕️", category: "hobbies", isPremium: false },
-  { id: "31", name: "Academia", emoji: "💪", category: "hobbies", isPremium: false },
-  { id: "32", name: "Leitor", emoji: "📚", category: "hobbies", isPremium: false },
-  { id: "33", name: "Atleta", emoji: "🏃", category: "hobbies", isPremium: false },
-  { id: "34", name: "Viagem", emoji: "✈️", category: "hobbies", isPremium: true },
-  { id: "35", name: "Skatista", emoji: "🛹", category: "hobbies", isPremium: false },
-  { id: "36", name: "Basquete", emoji: "🏀", category: "hobbies", isPremium: false },
-  { id: "37", name: "Boliche", emoji: "🎳", category: "hobbies", isPremium: false },
-  { id: "38", name: "Surfista", emoji: "🏄", category: "hobbies", isPremium: true },
-  { id: "39", name: "Futebol", emoji: "⚽", category: "hobbies", isPremium: false },
+  { id: 9, name: "Ar Livre", emoji: "🏕️", category: "hobbies" },
+  { id: 16, name: "Academia", emoji: "💪", category: "hobbies" },
+  { id: 17, name: "Leitor", emoji: "📚", category: "hobbies" },
+  { id: 18, name: "Atleta", emoji: "🏃", category: "hobbies" },
+  { id: 25, name: "Viagem", emoji: "✈️", category: "hobbies" },
+  { id: 29, name: "Skatista", emoji: "🛹", category: "hobbies" },
+  { id: 31, name: "Basquete", emoji: "🏀", category: "hobbies" },
+  { id: 36, name: "Boliche", emoji: "🎳", category: "hobbies" },
+  { id: 37, name: "Surfista", emoji: "🏄", category: "hobbies" },
+  { id: 45, name: "Futebol", emoji: "⚽", category: "hobbies" },
 
   // Entretenimento
-  { id: "40", name: "Bebida", emoji: "🍻", category: "entertainment", isPremium: false },
-  { id: "41", name: "Comida", emoji: "🍕", category: "entertainment", isPremium: false },
-  { id: "42", name: "Filmes", emoji: "🎬", category: "entertainment", isPremium: false },
-  { id: "43", name: "Seriados", emoji: "📺", category: "entertainment", isPremium: false },
-  { id: "44", name: "Fumante", emoji: "🚬", category: "entertainment", isPremium: false },
-  { id: "45", name: "Animais", emoji: "🐾", category: "entertainment", isPremium: false },
+  { id: 10, name: "Bebida", emoji: "🍻", category: "entertainment" },
+  { id: 11, name: "Comida", emoji: "🍕", category: "entertainment" },
+  { id: 12, name: "Filmes", emoji: "🎬", category: "entertainment" },
+  { id: 13, name: "Seriados", emoji: "📺", category: "entertainment" },
+  { id: 14, name: "Fumante", emoji: "🚬", category: "entertainment" },
+  { id: 22, name: "Animais", emoji: "🐾", category: "entertainment" },
 
   // Status & Lifestyle
-  { id: "46", name: "Namorando", emoji: "💑", category: "status", isPremium: false },
-  { id: "47", name: "Solteiro(a)", emoji: "💔", category: "status", isPremium: false },
-  { id: "48", name: "Insônia", emoji: "🌙", category: "status", isPremium: false },
-  { id: "49", name: "Lgbt", emoji: "🏳️‍🌈", category: "status", isPremium: false },
-  { id: "50", name: "Verão", emoji: "☀️", category: "status", isPremium: false },
+  { id: 51, name: "Namorando", emoji: "💑", category: "status" },
+  { id: 52, name: "Solteiro(a)", emoji: "💔", category: "status" },
+  { id: 42, name: "Insônia", emoji: "🌙", category: "status" },
+  { id: 44, name: "Lgbt", emoji: "🏳️‍🌈", category: "status" },
+  { id: 38, name: "Verão", emoji: "☀️", category: "status" },
 
   // Jogos
-  { id: "51", name: "Gamer", emoji: "🎮", category: "games", isPremium: false },
-  { id: "52", name: "League Of Legends", emoji: "⚔️", category: "games", isPremium: true },
-  { id: "53", name: "Valorant", emoji: "🔫", category: "games", isPremium: true },
-  { id: "54", name: "Counter-Strike 2", emoji: "💣", category: "games", isPremium: true },
-  { id: "55", name: "Paladins", emoji: "🛡️", category: "games", isPremium: false },
-  { id: "56", name: "Dota 2", emoji: "🗡️", category: "games", isPremium: true },
-  { id: "57", name: "Fortnite", emoji: "🏗️", category: "games", isPremium: false },
-  { id: "58", name: "Grand Theft Auto V", emoji: "🚗", category: "games", isPremium: true },
-  { id: "59", name: "Habbo", emoji: "🏨", category: "games", isPremium: false },
+  { id: 26, name: "Gamer", emoji: "🎮", category: "games" },
+  { id: 53, name: "League Of Legends", emoji: "⚔️", category: "games" },
+  { id: 54, name: "Valorant", emoji: "🔫", category: "games" },
+  { id: 55, name: "Counter-Strike 2", emoji: "💣", category: "games" },
+  { id: 56, name: "Paladins", emoji: "🛡️", category: "games" },
+  { id: 57, name: "Dota 2", emoji: "🗡️", category: "games" },
+  { id: 58, name: "Fortnite", emoji: "🏗️", category: "games" },
+  { id: 59, name: "Grand Theft Auto V", emoji: "🚗", category: "games" },
+  { id: 35, name: "Habbo", emoji: "🏨", category: "games" },
 
   // Outros
-  { id: "60", name: "Brasil", emoji: "🇧🇷", category: "other", isPremium: false },
+  { id: 34, name: "Brasil", emoji: "🇧🇷", category: "other" },
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -185,21 +186,19 @@ const SectionHeader = ({
   </div>
 );
 
-// Tag Chip Component
+// Tag Chip Component - Simplificado (sem premium/lock)
 const TagChip = ({
   tag,
   isSelected,
-  isPremium,
-  isLocked,
   onClick,
   size = "normal",
+  disabled = false,
 }: {
   tag: TagItem;
   isSelected: boolean;
-  isPremium: boolean;
-  isLocked: boolean;
   onClick: () => void;
   size?: "small" | "normal";
+  disabled?: boolean;
 }) => {
   const sizeClasses = size === "small" 
     ? "px-2 py-1 text-xs gap-1" 
@@ -208,19 +207,19 @@ const TagChip = ({
   return (
     <motion.button
       onClick={onClick}
-      disabled={isLocked}
+      disabled={disabled}
       className={`
         relative flex items-center ${sizeClasses} rounded-full font-medium
         transition-all duration-300 group
-        ${isLocked
-          ? "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] cursor-not-allowed opacity-60"
+        ${disabled
+          ? "opacity-50 cursor-not-allowed"
           : isSelected
             ? "bg-[var(--color-primary)] border border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25"
             : "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-surface-hover)]"
         }
       `}
-      whileHover={isLocked ? {} : { scale: 1.05 }}
-      whileTap={isLocked ? {} : { scale: 0.95 }}
+      whileHover={disabled ? {} : { scale: 1.05 }}
+      whileTap={disabled ? {} : { scale: 0.95 }}
       layout
     >
       {/* Emoji */}
@@ -229,12 +228,8 @@ const TagChip = ({
       {/* Name */}
       <span className="truncate max-w-[120px]">{tag.name}</span>
 
-      {/* Premium/Selected Icon */}
-      {isLocked ? (
-        <Lock size={size === "small" ? 10 : 12} className="text-[var(--color-text-muted)]" />
-      ) : isPremium && !isSelected ? (
-        <Crown size={size === "small" ? 10 : 12} className="text-yellow-400" />
-      ) : isSelected ? (
+      {/* Selected Icon */}
+      {isSelected && (
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -242,7 +237,7 @@ const TagChip = ({
         >
           <Check size={size === "small" ? 8 : 10} />
         </motion.div>
-      ) : null}
+      )}
 
       {/* Glow effect when selected */}
       {isSelected && (
@@ -261,18 +256,18 @@ const CategorySection = ({
   category,
   tags,
   selectedTags,
-  isPremiumUser,
   onTagClick,
   isExpanded,
   onToggle,
+  disabled,
 }: {
   category: Category;
   tags: TagItem[];
-  selectedTags: string[];
-  isPremiumUser: boolean;
-  onTagClick: (tagId: string) => void;
+  selectedTags: number[];
+  onTagClick: (tagId: number) => void;
   isExpanded: boolean;
   onToggle: () => void;
+  disabled: boolean;
 }) => {
   const Icon = category.icon;
   const selectedInCategory = tags.filter((t) => selectedTags.includes(t.id)).length;
@@ -329,9 +324,8 @@ const CategorySection = ({
                     key={tag.id}
                     tag={tag}
                     isSelected={selectedTags.includes(tag.id)}
-                    isPremium={tag.isPremium}
-                    isLocked={tag.isPremium && !isPremiumUser}
                     onClick={() => onTagClick(tag.id)}
+                    disabled={disabled}
                   />
                 ))}
               </div>
@@ -358,33 +352,72 @@ const EmptySelection = () => (
   </div>
 );
 
+// Loading Skeleton
+const LoadingSkeleton = () => (
+  <div className="space-y-4 animate-pulse">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="h-16 bg-[var(--color-surface)] rounded-[var(--border-radius-md)]" />
+    ))}
+  </div>
+);
+
 // ═══════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL
 // ═══════════════════════════════════════════════════════════
 
 const DashboardTags = () => {
   // Estados
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<number[]>([]);
+  const [initialTags, setInitialTags] = useState<number[]>([]); // Para comparar mudanças
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["personality"]);
-  const [isPremium] = useState(false);
+  
+  // ✅ Estados de loading e erro
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<"all" | "free" | "premium">("all");
 
-  const MAX_TAGS = isPremium ? 10 : 5;
+  const MAX_TAGS = 10; // Limite único para todos
 
-  // Filtrar tags baseado na busca e filtro ativo
+  // ✅ Carregar tags do usuário ao montar o componente
+  const loadUserTags = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await tagService.getUserTags();
+      const userTagIds = response.tags.map(tag => tag.tagId);
+      setSelectedTags(userTagIds);
+      setInitialTags(userTagIds);
+    } catch (err: any) {
+      console.error('Erro ao carregar tags:', err);
+      if (err.response?.status === 401) {
+        setError('Sessão expirada. Faça login novamente.');
+      } else {
+        setError('Erro ao carregar suas tags. Tente novamente.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUserTags();
+  }, [loadUserTags]);
+
+  // Verificar se houve mudanças
+  const hasChanges = useMemo(() => {
+    if (selectedTags.length !== initialTags.length) return true;
+    return !selectedTags.every(id => initialTags.includes(id));
+  }, [selectedTags, initialTags]);
+
+  // Filtrar tags baseado na busca
   const filteredTags = useMemo(() => {
     return allTags.filter((tag) => {
-      const matchesSearch = tag.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter =
-        activeFilter === "all" ||
-        (activeFilter === "free" && !tag.isPremium) ||
-        (activeFilter === "premium" && tag.isPremium);
-      return matchesSearch && matchesFilter;
+      return tag.name.toLowerCase().includes(searchQuery.toLowerCase());
     });
-  }, [searchQuery, activeFilter]);
+  }, [searchQuery]);
 
   // Agrupar tags por categoria
   const tagsByCategory = useMemo(() => {
@@ -395,12 +428,8 @@ const DashboardTags = () => {
   }, [filteredTags]);
 
   // Handler para selecionar/deselecionar tag
-  const handleTagClick = (tagId: string) => {
-    const tag = allTags.find((t) => t.id === tagId);
-    if (!tag) return;
-
-    // Verificar se é premium e usuário não é premium
-    if (tag.isPremium && !isPremium) return;
+  const handleTagClick = (tagId: number) => {
+    if (isSaving) return;
 
     setSelectedTags((prev) => {
       if (prev.includes(tagId)) {
@@ -440,21 +469,46 @@ const DashboardTags = () => {
     setSelectedTags([]);
   };
 
-  // Salvar alterações
+  // Reverter para tags originais
+  const revertChanges = () => {
+    setSelectedTags(initialTags);
+  };
+
+  // ✅ Salvar alterações no backend
   const handleSave = async () => {
+    if (!hasChanges) return;
+    
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSaving(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+    setError(null);
+    
+    try {
+      const response = await tagService.updateUserTags(selectedTags);
+      const updatedTagIds = response.tags.map(tag => tag.tagId);
+      
+      setSelectedTags(updatedTagIds);
+      setInitialTags(updatedTagIds);
+      setShowSuccess(true);
+      
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Erro ao salvar tags:', err);
+      
+      if (err.response?.status === 401) {
+        setError('Sessão expirada. Faça login novamente.');
+      } else if (err.response?.status === 404) {
+        setError('Uma ou mais tags não foram encontradas.');
+      } else {
+        setError(err.response?.data?.message || 'Erro ao salvar tags. Tente novamente.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Obter tags selecionadas como objetos
-  const selectedTagObjects = selectedTags.map((id) => allTags.find((t) => t.id === id)!).filter(Boolean);
-
-  // Contar tags premium selecionadas
-  const premiumTagsSelected = selectedTagObjects.filter((t) => t.isPremium).length;
-  const freeTagsSelected = selectedTagObjects.filter((t) => !t.isPremium).length;
+  const selectedTagObjects = selectedTags
+    .map((id) => allTags.find((t) => t.id === id))
+    .filter((t): t is TagItem => t !== undefined);
 
   // Animações
   const containerVariants = {
@@ -493,10 +547,31 @@ const DashboardTags = () => {
         >
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-text)] flex items-center gap-2 sm:gap-3">
             <Tag className="text-[var(--color-primary)] w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
-            Escolha as cores de seu perfil, e insira as tags que mais se identifica.
+            Escolha as tags que mais se identifica.
           </h1>
         </motion.div>
       </div>
+
+      {/* ✅ Error Message Global */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-6 p-4 rounded-[var(--border-radius-md)] bg-red-500/10 border border-red-500/30 flex items-center gap-3"
+          >
+            <AlertCircle size={20} className="text-red-400 flex-shrink-0" />
+            <span className="text-sm text-red-400 flex-1">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="p-1 rounded-full hover:bg-red-500/20 text-red-400"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Content Grid */}
       <motion.div
@@ -521,12 +596,14 @@ const DashboardTags = () => {
                   placeholder="Buscar tags..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={isLoading}
                   className="
                     w-full pl-10 pr-4 py-2.5 rounded-[var(--border-radius-md)]
                     bg-[var(--color-surface)] border border-[var(--color-border)]
                     text-[var(--color-text)] placeholder-[var(--color-text-muted)]
                     focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50
                     focus:border-[var(--color-primary)] transition-all
+                    disabled:opacity-50
                   "
                 />
                 {searchQuery && (
@@ -541,39 +618,25 @@ const DashboardTags = () => {
                 )}
               </div>
 
-              {/* Filter Buttons */}
-              <div className="flex gap-2">
-                {[
-                  { key: "all", label: "Todas" },
-                  { key: "free", label: "Grátis" },
-                  { key: "premium", label: "Premium" },
-                ].map((filter) => (
-                  <motion.button
-                    key={filter.key}
-                    onClick={() => setActiveFilter(filter.key as typeof activeFilter)}
-                    className={`
-                      px-3 py-2 rounded-[var(--border-radius-sm)] text-xs sm:text-sm font-medium
-                      transition-all duration-300 flex items-center gap-1.5
-                      ${activeFilter === filter.key
-                        ? "bg-[var(--color-primary)] text-white"
-                        : "bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]"
-                      }
-                    `}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {filter.key === "premium" && <Crown size={12} />}
-                    {filter.label}
-                  </motion.button>
-                ))}
-              </div>
+              {/* ✅ Reload Button */}
+              <motion.button
+                onClick={loadUserTags}
+                disabled={isLoading}
+                className="px-3 py-2 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] transition-colors flex items-center gap-2 disabled:opacity-50"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                <span className="text-sm hidden sm:inline">Recarregar</span>
+              </motion.button>
             </div>
 
             {/* Expand/Collapse All */}
             <div className="flex gap-2 mt-4 pt-4 border-t border-[var(--color-border)]">
               <motion.button
                 onClick={expandAll}
-                className="px-3 py-1.5 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] text-xs font-medium transition-colors flex items-center gap-1.5"
+                disabled={isLoading}
+                className="px-3 py-1.5 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] text-xs font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -582,7 +645,8 @@ const DashboardTags = () => {
               </motion.button>
               <motion.button
                 onClick={collapseAll}
-                className="px-3 py-1.5 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] text-xs font-medium transition-colors flex items-center gap-1.5"
+                disabled={isLoading}
+                className="px-3 py-1.5 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] text-xs font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -600,38 +664,45 @@ const DashboardTags = () => {
               description="Escolha as tags nas quais você mais se identifica para exibir em seu perfil."
             />
 
-            {/* Categories */}
-            <div className="space-y-3">
-              <AnimatePresence>
-                {tagsByCategory
-                  .filter((cat) => cat.tags.length > 0)
-                  .map((category) => (
-                    <CategorySection
-                      key={category.id}
-                      category={category}
-                      tags={category.tags}
-                      selectedTags={selectedTags}
-                      isPremiumUser={isPremium}
-                      onTagClick={handleTagClick}
-                      isExpanded={expandedCategories.includes(category.id)}
-                      onToggle={() => toggleCategory(category.id)}
-                    />
-                  ))}
-              </AnimatePresence>
-            </div>
+            {/* ✅ Loading State */}
+            {isLoading ? (
+              <LoadingSkeleton />
+            ) : (
+              <>
+                {/* Categories */}
+                <div className="space-y-3">
+                  <AnimatePresence>
+                    {tagsByCategory
+                      .filter((cat) => cat.tags.length > 0)
+                      .map((category) => (
+                        <CategorySection
+                          key={category.id}
+                          category={category}
+                          tags={category.tags}
+                          selectedTags={selectedTags}
+                          onTagClick={handleTagClick}
+                          isExpanded={expandedCategories.includes(category.id)}
+                          onToggle={() => toggleCategory(category.id)}
+                          disabled={isSaving}
+                        />
+                      ))}
+                  </AnimatePresence>
+                </div>
 
-            {/* No results message */}
-            {filteredTags.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12"
-              >
-                <Search size={40} className="text-[var(--color-text-muted)] mb-4" />
-                <p className="text-[var(--color-text-muted)]">
-                  Nenhuma tag encontrada para "{searchQuery}"
-                </p>
-              </motion.div>
+                {/* No results message */}
+                {filteredTags.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-12"
+                  >
+                    <Search size={40} className="text-[var(--color-text-muted)] mb-4" />
+                    <p className="text-[var(--color-text-muted)]">
+                      Nenhuma tag encontrada para "{searchQuery}"
+                    </p>
+                  </motion.div>
+                )}
+              </>
             )}
           </TagsCard>
         </motion.div>
@@ -645,17 +716,32 @@ const DashboardTags = () => {
               title="Preview"
               description={`${selectedTags.length}/${MAX_TAGS} tags selecionadas`}
               action={
-                selectedTags.length > 0 && (
-                  <motion.button
-                    onClick={clearSelection}
-                    className="p-2 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-red-500/10 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    title="Limpar seleção"
-                  >
-                    <RotateCcw size={16} />
-                  </motion.button>
-                )
+                <div className="flex gap-2">
+                  {hasChanges && (
+                    <motion.button
+                      onClick={revertChanges}
+                      disabled={isSaving}
+                      className="p-2 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-yellow-500/10 text-[var(--color-text-muted)] hover:text-yellow-400 transition-colors disabled:opacity-50"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      title="Reverter alterações"
+                    >
+                      <RotateCcw size={16} />
+                    </motion.button>
+                  )}
+                  {selectedTags.length > 0 && (
+                    <motion.button
+                      onClick={clearSelection}
+                      disabled={isSaving}
+                      className="p-2 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] hover:bg-red-500/10 text-[var(--color-text-muted)] hover:text-red-400 transition-colors disabled:opacity-50"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      title="Limpar seleção"
+                    >
+                      <X size={16} />
+                    </motion.button>
+                  )}
+                </div>
               }
             />
 
@@ -686,7 +772,11 @@ const DashboardTags = () => {
             </div>
 
             {/* Selected Tags Display */}
-            {selectedTags.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 size={24} className="animate-spin text-[var(--color-primary)]" />
+              </div>
+            ) : selectedTags.length === 0 ? (
               <EmptySelection />
             ) : (
               <div className="space-y-4">
@@ -698,10 +788,9 @@ const DashboardTags = () => {
                         key={tag.id}
                         tag={tag}
                         isSelected={true}
-                        isPremium={tag.isPremium}
-                        isLocked={false}
                         onClick={() => handleTagClick(tag.id)}
                         size="small"
+                        disabled={isSaving}
                       />
                     ))}
                   </AnimatePresence>
@@ -710,19 +799,31 @@ const DashboardTags = () => {
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-2 pt-4 border-t border-[var(--color-border)]">
                   <div className="p-3 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)]">
-                    <p className="text-xs text-[var(--color-text-muted)]">Tags Grátis</p>
-                    <p className="text-lg font-bold text-[var(--color-text)]">{freeTagsSelected}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Selecionadas</p>
+                    <p className="text-lg font-bold text-[var(--color-text)]">{selectedTags.length}</p>
                   </div>
                   <div className="p-3 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)]">
-                    <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                      <Crown size={10} className="text-yellow-400" />
-                      Premium
-                    </p>
-                    <p className="text-lg font-bold text-[var(--color-text)]">{premiumTagsSelected}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Disponíveis</p>
+                    <p className="text-lg font-bold text-[var(--color-text)]">{MAX_TAGS - selectedTags.length}</p>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* ✅ Unsaved Changes Indicator */}
+            <AnimatePresence>
+              {hasChanges && !showSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mt-4 flex items-center gap-2 p-3 rounded-[var(--border-radius-sm)] bg-yellow-500/10 border border-yellow-500/30"
+                >
+                  <AlertCircle size={16} className="text-yellow-400" />
+                  <span className="text-sm text-yellow-400">Você tem alterações não salvas</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Success Message */}
             <AnimatePresence>
@@ -742,7 +843,7 @@ const DashboardTags = () => {
             {/* Save Button */}
             <motion.button
               onClick={handleSave}
-              disabled={isSaving || selectedTags.length === 0}
+              disabled={isSaving || isLoading || !hasChanges}
               className="
                 w-full mt-4 px-4 py-3 rounded-[var(--border-radius-md)]
                 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]
@@ -750,73 +851,22 @@ const DashboardTags = () => {
                 disabled:opacity-50 disabled:cursor-not-allowed
                 flex items-center justify-center gap-2
               "
-              whileHover={isSaving ? {} : { scale: 1.02 }}
-              whileTap={isSaving ? {} : { scale: 0.98 }}
+              whileHover={isSaving || !hasChanges ? {} : { scale: 1.02 }}
+              whileTap={isSaving || !hasChanges ? {} : { scale: 0.98 }}
             >
               {isSaving ? (
                 <>
-                  <motion.div
-                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  />
+                  <Loader2 size={18} className="animate-spin" />
                   Salvando...
                 </>
               ) : (
                 <>
                   <Check size={18} />
-                  Salvar Tags
+                  {hasChanges ? "Salvar Tags" : "Nenhuma alteração"}
                 </>
               )}
             </motion.button>
           </TagsCard>
-
-          {/* Premium Upgrade Card */}
-          {!isPremium && (
-            <TagsCard className="relative overflow-hidden border-[var(--color-primary)]/30">
-              {/* Gradient Background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 via-transparent to-[var(--color-secondary)]/5 pointer-events-none" />
-
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-[var(--border-radius-sm)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)]">
-                    <Crown size={20} className="text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-[var(--color-text)]">
-                      Desbloqueie mais tags!
-                    </h3>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Usuários Premium podem selecionar até 10 tags
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                    <Sparkles size={12} className="text-[var(--color-primary)]" />
-                    <span>Acesso a tags exclusivas</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                    <Sparkles size={12} className="text-[var(--color-primary)]" />
-                    <span>Limite de 10 tags no perfil</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                    <Sparkles size={12} className="text-[var(--color-primary)]" />
-                    <span>Destaque visual especial</span>
-                  </div>
-                </div>
-
-                <motion.button
-                  className="w-full px-4 py-2.5 rounded-[var(--border-radius-md)] bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white text-sm font-semibold shadow-lg shadow-[var(--color-primary)]/25"
-                  whileHover={{ scale: 1.02, boxShadow: "0 15px 30px rgba(143, 124, 255, 0.3)" }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Obter Premium
-                </motion.button>
-              </div>
-            </TagsCard>
-          )}
 
           {/* Quick Stats */}
           <TagsCard>
@@ -827,19 +877,12 @@ const DashboardTags = () => {
                 <span className="text-sm font-medium text-[var(--color-text)]">{allTags.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[var(--color-text-muted)]">Tags grátis</span>
-                <span className="text-sm font-medium text-[var(--color-text)]">
-                  {allTags.filter((t) => !t.isPremium).length}
-                </span>
+                <span className="text-xs text-[var(--color-text-muted)]">Suas tags</span>
+                <span className="text-sm font-medium text-[var(--color-text)]">{selectedTags.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                  <Crown size={10} className="text-yellow-400" />
-                  Tags premium
-                </span>
-                <span className="text-sm font-medium text-[var(--color-text)]">
-                  {allTags.filter((t) => t.isPremium).length}
-                </span>
+                <span className="text-xs text-[var(--color-text-muted)]">Limite máximo</span>
+                <span className="text-sm font-medium text-[var(--color-text)]">{MAX_TAGS}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-[var(--color-text-muted)]">Categorias</span>
