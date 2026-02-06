@@ -88,7 +88,7 @@ const STATS: StatCard[] = [
   },
   {
     id: "vcoins",
-    label: "Zyons",
+    label: "Vcoins",
     value: 0,
     icon: Zap,
     color: "#F59E0B",
@@ -443,7 +443,7 @@ const DashboardStart = () => {
               Visão Geral
             </h1>
             <p className="text-xs sm:text-sm lg:text-base text-[var(--color-text-muted)] mt-1 sm:mt-2">
-              Bem-vindo ao seu painel zyo.se. Aqui você tem uma visão rápida do seu perfil, análises e configurações.
+              Bem-vindo ao seu painel vxo.lat. Aqui você tem uma visão rápida do seu perfil, análises e configurações.
             </p>
           </div>
           

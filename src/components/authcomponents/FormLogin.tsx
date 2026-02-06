@@ -1,4 +1,8 @@
+// src/components/FormLogin.tsx
+
 import React, { useState, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { useLocation } from 'react-router-dom';
 
 interface FormData {
   email: string;
@@ -8,16 +12,23 @@ interface FormData {
 interface FormErrors {
   email?: string;
   password?: string;
+  general?: string;
 }
 
 const FormLogin: React.FC = () => {
+  const { login, isLoading: authLoading } = useAuth();
+  const location = useLocation();
+  
   const [formData, setFormData] = useState<FormData>({ email: '', password: '' });
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
+
+  // Mensagem de redirecionamento (ex: sessão expirada)
+  const redirectMessage = (location.state as { message?: string })?.message;
 
   const validateEmail = (email: string): string | undefined => {
     if (!email.trim()) return 'Email é obrigatório';
@@ -29,8 +40,6 @@ const FormLogin: React.FC = () => {
   const validatePassword = (password: string): string | undefined => {
     if (!password) return 'Senha é obrigatória';
     if (password.length < 6) return 'Mínimo de 6 caracteres';
-    if (!/[A-Z]/.test(password)) return 'Inclua uma letra maiúscula';
-    if (!/[0-9]/.test(password)) return 'Inclua um número';
     return undefined;
   };
 
@@ -44,6 +53,11 @@ const FormLogin: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Limpa erro geral ao digitar
+    if (errors.general) {
+      setErrors(prev => ({ ...prev, general: undefined }));
+    }
 
     if (touched[name]) {
       const error = name === 'email' ? validateEmail(value) : validatePassword(value);
@@ -70,10 +84,46 @@ const FormLogin: React.FC = () => {
     setTouched({ email: true, password: true });
 
     if (!formErrors.email && !formErrors.password) {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setIsLoading(false);
-      console.log('Login:', formData);
+      setIsSubmitting(true);
+      
+      try {
+        await login(formData.email, formData.password, rememberMe);
+        // Sucesso! O AuthContext cuida do redirecionamento
+      } catch (error: any) {
+        console.error('Login error:', error);
+        
+        // Trata diferentes tipos de erro
+        if (error.response) {
+          const status = error.response.status;
+          const message = error.response.data?.message;
+          
+          switch (status) {
+            case 401:
+              setErrors({ general: 'Email ou senha incorretos' });
+              break;
+            case 403:
+              setErrors({ general: 'Conta bloqueada. Entre em contato com o suporte.' });
+              break;
+            case 404:
+              setErrors({ general: 'Usuário não encontrado' });
+              break;
+            case 429:
+              setErrors({ general: 'Muitas tentativas. Aguarde alguns minutos.' });
+              break;
+            case 500:
+              setErrors({ general: 'Erro no servidor. Tente novamente mais tarde.' });
+              break;
+            default:
+              setErrors({ general: message || 'Erro ao fazer login. Tente novamente.' });
+          }
+        } else if (error.request) {
+          setErrors({ general: 'Sem conexão com o servidor. Verifique sua internet.' });
+        } else {
+          setErrors({ general: 'Erro inesperado. Tente novamente.' });
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -100,13 +150,13 @@ const FormLogin: React.FC = () => {
   };
 
   const passwordStrength = getPasswordStrength();
+  const isLoading = isSubmitting || authLoading;
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-[var(--color-background)]">
-      
-      {/* Background Decorations */}
+
+      {/* Background Decorations - mantido igual */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Gradient Orbs */}
         <div 
           className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-30 blur-3xl"
           style={{ background: `radial-gradient(circle, var(--color-primary) 0%, transparent 70%)` }}
@@ -115,29 +165,11 @@ const FormLogin: React.FC = () => {
           className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl"
           style={{ background: `radial-gradient(circle, var(--color-secondary) 0%, transparent 70%)` }}
         />
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-10 blur-3xl"
-          style={{ background: `radial-gradient(circle, var(--color-primary-dark) 0%, transparent 70%)` }}
-        />
-
-        {/* Floating dots */}
-        <div 
-          className="absolute top-20 left-[15%] w-2 h-2 rounded-full opacity-40 animate-float-slow"
-          style={{ backgroundColor: 'var(--color-primary)' }}
-        />
-        <div 
-          className="absolute top-[40%] right-[10%] w-3 h-3 rounded-full opacity-30 animate-float-medium"
-          style={{ backgroundColor: 'var(--color-secondary)' }}
-        />
-        <div 
-          className="absolute bottom-[20%] left-[20%] w-2 h-2 rounded-full opacity-40 animate-float-fast"
-          style={{ backgroundColor: 'var(--color-primary-dark)' }}
-        />
       </div>
 
       {/* Login Card */}
       <div 
-        className="relative w-full max-w-md mx-auto p-8 md:p-10 transition-all duration-500 group"
+        className="relative w-full max-w-md mx-auto p-8 md:p-10 transition-all duration-500"
         style={{
           backgroundColor: 'var(--card-background-glass)',
           backdropFilter: `blur(var(--blur-amount))`,
@@ -146,8 +178,6 @@ const FormLogin: React.FC = () => {
           border: '1px solid var(--color-border)',
         }}
       >
-        
-
         {/* Header */}
         <div className="text-center mb-8">
           {/* Logo */}
@@ -191,6 +221,38 @@ const FormLogin: React.FC = () => {
           </p>
         </div>
 
+        {/* Mensagem de redirecionamento */}
+        {redirectMessage && (
+          <div 
+            className="mb-6 p-4 rounded-lg border flex items-center gap-3 animate-fade-in"
+            style={{
+              backgroundColor: 'rgba(251, 191, 36, 0.1)',
+              borderColor: 'rgba(251, 191, 36, 0.3)',
+            }}
+          >
+            <svg className="w-5 h-5 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-yellow-500 text-sm">{redirectMessage}</span>
+          </div>
+        )}
+
+        {/* Erro geral */}
+        {errors.general && (
+          <div 
+            className="mb-6 p-4 rounded-lg border flex items-center gap-3 animate-fade-in"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderColor: 'rgba(239, 68, 68, 0.3)',
+            }}
+          >
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-red-500 text-sm">{errors.general}</span>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           
@@ -203,7 +265,6 @@ const FormLogin: React.FC = () => {
               Email
             </label>
             <div className="relative">
-              {/* Glow on focus */}
               <div 
                 className={`absolute -inset-[1px] blur-sm transition-opacity duration-300 ${
                   focusedField === 'email' ? 'opacity-60' : 'opacity-0'
@@ -240,7 +301,9 @@ const FormLogin: React.FC = () => {
                   onBlur={handleBlur}
                   onFocus={() => setFocusedField('email')}
                   placeholder="seu@email.com"
-                  className="w-full pl-12 pr-12 py-4 outline-none transition-all duration-300"
+                  disabled={isLoading}
+                  autoComplete="email"
+                  className="w-full pl-12 pr-12 py-4 outline-none transition-all duration-300 disabled:opacity-60"
                   style={{
                     backgroundColor: 'var(--color-background)',
                     color: 'var(--color-text)',
@@ -249,7 +312,6 @@ const FormLogin: React.FC = () => {
                   }}
                 />
 
-                {/* Validation icon */}
                 {touched.email && (
                   <div className="absolute right-4">
                     {errors.email ? (
@@ -289,7 +351,6 @@ const FormLogin: React.FC = () => {
               Senha
             </label>
             <div className="relative">
-              {/* Glow on focus */}
               <div 
                 className={`absolute -inset-[1px] blur-sm transition-opacity duration-300 ${
                   focusedField === 'password' ? 'opacity-60' : 'opacity-0'
@@ -326,7 +387,9 @@ const FormLogin: React.FC = () => {
                   onBlur={handleBlur}
                   onFocus={() => setFocusedField('password')}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-4 outline-none transition-all duration-300"
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                  className="w-full pl-12 pr-12 py-4 outline-none transition-all duration-300 disabled:opacity-60"
                   style={{
                     backgroundColor: 'var(--color-background)',
                     color: 'var(--color-text)',
@@ -338,7 +401,8 @@ const FormLogin: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 transition-colors duration-300 hover:opacity-80"
+                  disabled={isLoading}
+                  className="absolute right-4 transition-colors duration-300 hover:opacity-80 disabled:opacity-40"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
                   {showPassword ? (
@@ -365,7 +429,7 @@ const FormLogin: React.FC = () => {
             )}
 
             {/* Password Strength */}
-            {formData.password && (
+            {formData.password && !errors.password && (
               <div className="space-y-2 pt-1 animate-fade-in">
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((level) => (
@@ -383,10 +447,7 @@ const FormLogin: React.FC = () => {
                     />
                   ))}
                 </div>
-                <p className="text-xs flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   Força: {passwordStrength.text}
                 </p>
               </div>
@@ -401,6 +462,7 @@ const FormLogin: React.FC = () => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={() => setRememberMe(!rememberMe)}
+                  disabled={isLoading}
                   className="sr-only"
                 />
                 <div 
@@ -409,6 +471,7 @@ const FormLogin: React.FC = () => {
                     backgroundColor: rememberMe ? 'var(--color-primary)' : 'var(--color-surface)',
                     border: `2px solid ${rememberMe ? 'var(--color-primary)' : 'var(--color-border)'}`,
                     borderRadius: 'var(--border-radius-sm)',
+                    opacity: isLoading ? 0.6 : 1,
                   }}
                 >
                   {rememberMe && (
@@ -424,7 +487,7 @@ const FormLogin: React.FC = () => {
             </label>
 
             <a 
-              href="/validate-email" 
+              href="/forgot-password" 
               className="text-sm font-medium transition-opacity duration-300 hover:opacity-80"
               style={{ color: 'var(--color-primary)' }}
             >
@@ -447,7 +510,6 @@ const FormLogin: React.FC = () => {
               borderRadius: 'var(--border-radius-md)',
             }}
           >
-            {/* Shimmer effect */}
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 animate-shimmer" />
             </div>
@@ -471,8 +533,6 @@ const FormLogin: React.FC = () => {
               )}
             </span>
           </button>
-
-          
 
           {/* Sign Up Link */}
           <p className="text-center text-sm mt-6" style={{ color: 'var(--color-text-muted)' }}>
@@ -504,21 +564,6 @@ const FormLogin: React.FC = () => {
           0% { opacity: 0; transform: translateY(-5px); }
           100% { opacity: 1; transform: translateY(0); }
         }
-
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-20px); }
-        }
-
-        @keyframes float-medium {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-15px); }
-        }
-
-        @keyframes float-fast {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
         
         .animate-shimmer {
           animation: shimmer 3s infinite;
@@ -530,18 +575,6 @@ const FormLogin: React.FC = () => {
         
         .animate-fade-in {
           animation: fade-in 0.2s ease-out;
-        }
-
-        .animate-float-slow {
-          animation: float-slow 6s ease-in-out infinite;
-        }
-
-        .animate-float-medium {
-          animation: float-medium 4s ease-in-out infinite;
-        }
-
-        .animate-float-fast {
-          animation: float-fast 3s ease-in-out infinite;
         }
       `}</style>
     </div>

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { VxoLogo } from "../LogoProps";
 
 const Footer = () => {
   const scrollToTop = () => {
@@ -24,9 +25,7 @@ const Footer = () => {
             transition={{ type: "spring", stiffness: 400 }}
           >
             <span className="text-3xl font-bold text-[var(--color-text)]">
-              Vxo
-              <span className="text-[var(--color-primary)]">.</span>
-              <span className="text-[var(--color-text-muted)]">se</span>
+              <VxoLogo />
             </span>
             <motion.div 
               className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full origin-left"

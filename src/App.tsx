@@ -1,5 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./hooks/ThemeProvider";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+
 import DashboardLayout from "./pages/dashboardpages/DashboardLayout";
 import Login from "./pages/authpages/Login";
 import Register from "./pages/authpages/Register";
@@ -7,6 +9,7 @@ import EmailValidation from "./pages/authpages/EmailValidation";
 import PrincingSection from "./pages/homepages/PrincingSection";
 import RankingPage from "./pages/homepages/RankingPage";
 import Home from "./pages/homepages/Home";
+
 import DashboardSettings from "./pages/dashboardpages/DashboardSettings";
 import LogsPremium from "./pages/dashboardpages/LogsPremium";
 import DashboardLinks from "./pages/dashboardpages/DashboardLinks";
@@ -17,37 +20,144 @@ import DashboardTags from "./pages/dashboardpages/DashboardTags";
 import DashboardAssets from "./pages/dashboardpages/DashboardAssets";
 import DashboardStart from "./pages/dashboardpages/DashboardStart";
 
+import TitleManager from "./types/TitleManager";
+import { AuthProvider } from "./contexts/AuthContext";
+
 function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen transition-colors duration-300">
-          <main>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/validate-email" element={<EmailValidation />} />
-              <Route path="/plans" element={<PrincingSection />} />
-              <Route path="/ranking" element={<RankingPage />} />
-              <Route path="/dashboard" element={<DashboardLayout><div></div></DashboardLayout>} />
+        <AuthProvider>
+          <TitleManager />
 
-              <Route path="/dashboard/start" element={<DashboardLayout><DashboardStart /></DashboardLayout>} />
+          <div className="min-h-screen transition-colors duration-300">
+            <main>
+              <Routes>
+                {/* Rotas públicas */}
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/validate-email" element={<EmailValidation />} />
+                <Route path="/plans" element={<PrincingSection />} />
+                <Route path="/ranking" element={<RankingPage />} />
 
+                {/* 🔒 Dashboard protegido (mantendo layout manual) */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardStart />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route path="/dashboard/settings" element={<DashboardLayout><DashboardSettings /></DashboardLayout>} />
-              <Route path="/dashboard/tags" element={<DashboardLayout><DashboardTags /></DashboardLayout>} />
-              <Route path="/dashboard/logs" element={<DashboardLayout><LogsPremium /></DashboardLayout>} />
-              <Route path="/dashboard/links" element={<DashboardLayout><DashboardLinks /></DashboardLayout>} />
-              <Route path="/dashboard/socialmedia" element={<DashboardLayout><DashboardSocial /></DashboardLayout>} />
-              <Route path="/dashboard/assets" element={<DashboardLayout><DashboardAssets /></DashboardLayout>} />
+                <Route
+                  path="/dashboard/start"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardStart />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route path="/dashboard/inventory" element={<DashboardLayout><DashboardInventory /></DashboardLayout>} />
+                <Route
+                  path="/dashboard/settings"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardSettings />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route path="/dashboard/customization" element={<DashboardLayout><DashboardCustomization /></DashboardLayout>} />
-            </Routes>
-          </main>
-        </div>
+                <Route
+                  path="/dashboard/tags"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardTags />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/logs"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <LogsPremium />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/links"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardLinks />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/socialmedia"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardSocial />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/assets"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardAssets />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/inventory"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardInventory />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/customization"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardCustomization />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </main>
+          </div>
+        </AuthProvider>
       </Router>
     </ThemeProvider>
   );

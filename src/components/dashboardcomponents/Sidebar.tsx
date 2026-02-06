@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/ThemeProvider";
+import { useAuth } from "../../hooks/useAuth"; // ✅ Adicionado
 import { VxoLogo } from "../LogoProps";
 import { VxoLogoSmall } from "../LogoPropsSmall";
 
@@ -22,7 +23,11 @@ import {
   X,
   Sun,
   Moon,
-  Lock, // ✅ Ícone de cadeado para itens bloqueados
+  Lock,
+  LogOut,      // ✅ Adicionado
+  ChevronDown, // ✅ Adicionado
+  User,        // ✅ Adicionado
+  Loader2,     // ✅ Adicionado
 } from "lucide-react";
 
 interface NavItem {
@@ -31,7 +36,7 @@ interface NavItem {
   href: string;
   badge?: string;
   isBlock?: boolean;
-  blockReason?: string; // ✅ Motivo do bloqueio (opcional)
+  blockReason?: string;
 }
 
 interface NavSection {
@@ -44,6 +49,42 @@ const Sidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("Início");
   const { isDark, toggleTheme } = useTheme();
+  
+  // ✅ Auth hooks e estados para logout
+  const { user, logout, isLoading } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // ✅ Função de Logout
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      // O AuthContext já redireciona para /login
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Mesmo com erro, tenta redirecionar
+      window.location.href = '/login';
+    } finally {
+      setIsLoggingOut(false);
+      setShowUserMenu(false);
+    }
+  };
+
+  // ✅ Gera iniciais do usuário
+  const getUserInitials = (name?: string, email?: string): string => {
+    if (name) {
+      const parts = name.split(' ');
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return name.slice(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase();
+    }
+    return 'US';
+  };
 
   const navSections: NavSection[] = [
     {
@@ -56,7 +97,7 @@ const Sidebar = () => {
           href: "/loja",
           badge: "Novo",
           isBlock: true,
-          blockReason: "Em breve" // ✅ Motivo do bloqueio
+          blockReason: "Em breve"
         },
       ],
     },
@@ -96,7 +137,7 @@ const Sidebar = () => {
     closed: { x: -300, opacity: 0 },
   };
 
-  // ✅ Componente NavItem atualizado com lógica de block
+  // Componente NavItem atualizado com lógica de block
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const isActive = activeItem === item.label;
     const isBlocked = item.isBlock === true;
@@ -104,7 +145,6 @@ const Sidebar = () => {
     const handleClick = (e: React.MouseEvent) => {
       e.preventDefault();
 
-      // ✅ Se estiver bloqueado, não faz nada
       if (isBlocked) {
         return;
       }
@@ -116,7 +156,6 @@ const Sidebar = () => {
     return (
       <motion.div
         className="relative"
-        // ✅ Desabilita animações se estiver bloqueado
         whileHover={isBlocked ? {} : { x: 4 }}
         whileTap={isBlocked ? {} : { scale: 0.98 }}
       >
@@ -128,19 +167,18 @@ const Sidebar = () => {
             transition-all duration-300 group
             
             ${isBlocked
-              ? "cursor-not-allowed opacity-50" // ✅ Estilo bloqueado
+              ? "cursor-not-allowed opacity-50"
               : "cursor-pointer"
             }
             
             ${isActive && !isBlocked
               ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
               : isBlocked
-                ? "text-[var(--color-text-muted)]" // ✅ Cor para bloqueado
+                ? "text-[var(--color-text-muted)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
             }
           `}
         >
-          {/* Active Indicator - Não mostra se bloqueado */}
           {isActive && !isBlocked && (
             <motion.div
               layoutId="activeIndicator"
@@ -151,12 +189,10 @@ const Sidebar = () => {
             />
           )}
 
-          {/* Icon */}
           <span className={`flex-shrink-0 ${isActive && !isBlocked ? "text-[var(--color-primary)]" : ""}`}>
             {item.icon}
           </span>
 
-          {/* Label */}
           <AnimatePresence>
             {!isCollapsed && (
               <motion.span
@@ -170,10 +206,8 @@ const Sidebar = () => {
             )}
           </AnimatePresence>
 
-          {/* ✅ Badge ou Lock Icon */}
           {!isCollapsed && (
             <div className="ml-auto flex items-center gap-2">
-              {/* Badge normal */}
               {item.badge && !isBlocked && (
                 <motion.span
                   initial={{ scale: 0 }}
@@ -184,7 +218,6 @@ const Sidebar = () => {
                 </motion.span>
               )}
 
-              {/* ✅ Lock indicator quando bloqueado */}
               {isBlocked && (
                 <motion.div
                   initial={{ scale: 0 }}
@@ -202,7 +235,6 @@ const Sidebar = () => {
             </div>
           )}
 
-          {/* ✅ Tooltip for collapsed state - Atualizado para bloqueados */}
           {isCollapsed && (
             <div className="
               absolute left-full ml-3 px-3 py-1.5 rounded-[var(--border-radius-sm)]
@@ -216,14 +248,12 @@ const Sidebar = () => {
                 {item.label}
               </span>
 
-              {/* Badge no tooltip */}
               {item.badge && !isBlocked && (
                 <span className="px-1.5 py-0.5 text-xs rounded-full bg-[var(--color-primary)] text-white">
                   {item.badge}
                 </span>
               )}
 
-              {/* ✅ Lock no tooltip */}
               {isBlocked && (
                 <div className="flex items-center gap-1 text-[var(--color-text-muted)]">
                   <Lock size={12} />
@@ -236,10 +266,8 @@ const Sidebar = () => {
           )}
         </a>
 
-        {/* ✅ Overlay visual para itens bloqueados (opcional - efeito extra) */}
         {isBlocked && (
           <div className="absolute inset-0 rounded-[var(--border-radius-sm)] pointer-events-none">
-            {/* Linha diagonal sutil */}
             <div className="absolute inset-0 overflow-hidden rounded-[var(--border-radius-sm)] opacity-10">
               <div
                 className="absolute inset-0"
@@ -260,8 +288,6 @@ const Sidebar = () => {
     );
   };
 
-  // ✅ Componente para Mobile NavItem com lógica de block
-  // ✅ Componente para Mobile NavItem CORRIGIDO
   const MobileNavItemComponent = ({ item }: { item: NavItem }) => {
     const isActive = activeItem === item.label;
     const isBlocked = item.isBlock === true;
@@ -275,8 +301,6 @@ const Sidebar = () => {
 
       setActiveItem(item.label);
       setIsMobileOpen(false);
-
-      // ✅ ADICIONADO: Navegação para o link
       window.location.href = item.href;
     };
 
@@ -488,42 +512,150 @@ const Sidebar = () => {
           </AnimatePresence>
         </motion.button>
 
-        <motion.div
-          className={`
-            mt-3 flex items-center gap-3 p-3 rounded-[var(--border-radius-md)]
-            bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10
-            border border-[var(--color-border)] cursor-pointer
-            hover:from-[var(--color-primary)]/20 hover:to-[var(--color-secondary)]/20
-            transition-all duration-300
-            ${isCollapsed ? "justify-center p-2" : ""}
-          `}
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="relative">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">US</span>
+        {/* ✅ User Card com Dropdown - DESKTOP */}
+        <div className="relative mt-3">
+          <motion.div
+            onClick={() => !isCollapsed && setShowUserMenu(!showUserMenu)}
+            className={`
+              flex items-center gap-3 p-3 rounded-[var(--border-radius-md)]
+              bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10
+              border border-[var(--color-border)] cursor-pointer
+              hover:from-[var(--color-primary)]/20 hover:to-[var(--color-secondary)]/20
+              transition-all duration-300
+              ${isCollapsed ? "justify-center p-2" : ""}
+            `}
+            whileHover={{ scale: 1.02 }}
+          >
+            {/* Avatar */}
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">
+                  {getUserInitials(user?.name, user?.email)}
+                </span>
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
-          </div>
 
+            <AnimatePresence>
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex-1 min-w-0"
+                >
+                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">
+                    {user?.name || 'Usuário'}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] truncate">
+                    vxo.lat/{user?.urlName || 'usuario'}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ✅ Dropdown Arrow */}
+            <AnimatePresence>
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, rotate: showUserMenu ? 180 : 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown size={16} className="text-[var(--color-text-muted)]" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* ✅ Dropdown Menu - DESKTOP */}
           <AnimatePresence>
-            {!isCollapsed && (
+            {showUserMenu && !isCollapsed && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex-1 min-w-0"
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-0 right-0 mb-2 p-2 rounded-[var(--border-radius-md)] border shadow-lg z-50"
+                style={{
+                  backgroundColor: 'var(--color-background)',
+                  borderColor: 'var(--color-border)',
+                }}
               >
-                <p className="text-sm font-semibold text-[var(--color-text)] truncate">
-                  Usuário
-                </p>
-                <p className="text-xs text-[var(--color-text-muted)] truncate">
-                  vxo.lat/usuario
-                </p>
+                {/* Profile Button */}
+                <motion.button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    window.location.href = '/dashboard/settings';
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] transition-all duration-200"
+                  whileHover={{ x: 4 }}
+                >
+                  <User size={18} />
+                  <span className="text-sm">Meu Perfil</span>
+                </motion.button>
+
+                {/* Divider */}
+                <div className="my-2 border-t border-[var(--color-border)]" />
+
+                {/* Logout Button */}
+                <motion.button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut || isLoading}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-red-500 hover:bg-red-500/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isLoggingOut ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <LogOut size={18} />
+                  )}
+                  <span className="text-sm">
+                    {isLoggingOut ? 'Saindo...' : 'Sair da conta'}
+                  </span>
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
+
+          {/* ✅ Tooltip para modo collapsed com opção de logout */}
+          {isCollapsed && (
+            <div className="
+              absolute left-full ml-3 px-3 py-2 rounded-[var(--border-radius-md)]
+              bg-[var(--color-background)] border border-[var(--color-border)]
+              opacity-0 invisible group-hover:opacity-100 group-hover:visible
+              transition-all duration-200 whitespace-nowrap z-50
+              shadow-lg
+            ">
+              <div className="flex flex-col gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text)]">
+                    {user?.name || 'Usuário'}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    vxo.lat/{user?.urlName || 'usuario'}
+                  </p>
+                </div>
+                <div className="border-t border-[var(--color-border)] pt-2">
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="flex items-center gap-2 text-red-500 hover:text-red-400 text-sm disabled:opacity-50"
+                  >
+                    {isLoggingOut ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <LogOut size={14} />
+                    )}
+                    <span>{isLoggingOut ? 'Saindo...' : 'Sair'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
@@ -568,21 +700,91 @@ const Sidebar = () => {
           </span>
         </motion.button>
 
-        <motion.div
-          className="mt-3 flex items-center gap-3 p-3 rounded-[var(--border-radius-md)] bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10 border border-[var(--color-border)] cursor-pointer hover:from-[var(--color-primary)]/20 hover:to-[var(--color-secondary)]/20 transition-all duration-300"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="relative">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">US</span>
+        {/* ✅ User Card com Dropdown - MOBILE */}
+        <div className="relative mt-3">
+          <motion.div
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-3 p-3 rounded-[var(--border-radius-md)] bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10 border border-[var(--color-border)] cursor-pointer hover:from-[var(--color-primary)]/20 hover:to-[var(--color-secondary)]/20 transition-all duration-300"
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">
+                  {getUserInitials(user?.name, user?.email)}
+                </span>
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[var(--color-text)] truncate">Usuário</p>
-            <p className="text-xs text-[var(--color-text-muted)] truncate">vxo.lat/usuario</p>
-          </div>
-        </motion.div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[var(--color-text)] truncate">
+                {user?.name || 'Usuário'}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] truncate">
+                vxo.lat/{user?.urlName || 'usuario'}
+              </p>
+            </div>
+            
+            {/* ✅ Dropdown Arrow */}
+            <motion.div
+              animate={{ rotate: showUserMenu ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown size={16} className="text-[var(--color-text-muted)]" />
+            </motion.div>
+          </motion.div>
+
+          {/* ✅ Dropdown Menu - MOBILE */}
+          <AnimatePresence>
+            {showUserMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-0 right-0 mb-2 p-2 rounded-[var(--border-radius-md)] border shadow-lg z-50"
+                style={{
+                  backgroundColor: 'var(--color-background)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
+                {/* Profile Button */}
+                <motion.button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setIsMobileOpen(false);
+                    window.location.href = '/dashboard/profile';
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] transition-all duration-200"
+                  whileHover={{ x: 4 }}
+                >
+                  <User size={18} />
+                  <span className="text-sm">Meu Perfil</span>
+                </motion.button>
+
+                {/* Divider */}
+                <div className="my-2 border-t border-[var(--color-border)]" />
+
+                {/* Logout Button */}
+                <motion.button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut || isLoading}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-red-500 hover:bg-red-500/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isLoggingOut ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <LogOut size={18} />
+                  )}
+                  <span className="text-sm">
+                    {isLoggingOut ? 'Saindo...' : 'Sair da conta'}
+                  </span>
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </>
   );
@@ -613,7 +815,7 @@ const Sidebar = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden fixed inset-0  backdrop-blur-sm z-40"
+            className="lg:hidden fixed inset-0 backdrop-blur-sm z-40"
           />
         )}
       </AnimatePresence>

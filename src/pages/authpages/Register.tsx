@@ -7,6 +7,7 @@ function Register() {
     <div className="min-h-screen b text-white overflow-x-hidden">
       <Navbar />
       <FormRegister />
+      <div className="border-t border-[var(--color-border)]"></div>
       <Footer />
     </div>
   )

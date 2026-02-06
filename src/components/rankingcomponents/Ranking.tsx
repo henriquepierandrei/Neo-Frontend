@@ -123,7 +123,7 @@ const Ranking: React.FC = () => {
       case 'views':
         return 'Views';
       case 'coins':
-        return 'Moedas';
+        return 'Vcoins';
       case 'oldest':
         return 'Membro desde';
       case 'level':

@@ -1,4 +1,6 @@
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 interface FormData {
   name: string;
@@ -14,9 +16,10 @@ interface FormErrors {
   username?: string;
   password?: string;
   confirmPassword?: string;
+  general?: string;
 }
 
-// ✅ COMPONENTE FORA DO FormRegister
+// ✅ COMPONENTE InputField (mantido igual)
 interface InputFieldProps {
   name: string;
   label: string;
@@ -29,6 +32,7 @@ interface InputFieldProps {
   icon: React.ReactNode;
   showToggle?: boolean;
   isVisible?: boolean;
+  disabled?: boolean;
   onToggleVisibility?: () => void;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
@@ -47,6 +51,7 @@ const InputField: React.FC<InputFieldProps> = ({
   icon,
   showToggle = false,
   isVisible = true,
+  disabled = false,
   onToggleVisibility,
   onChange,
   onBlur,
@@ -60,7 +65,6 @@ const InputField: React.FC<InputFieldProps> = ({
       {label}
     </label>
     <div className="relative">
-      {/* Glow on focus */}
       <div
         className={`absolute -inset-[1px] blur-sm transition-opacity duration-300 ${
           isFocused ? 'opacity-60' : 'opacity-0'
@@ -72,7 +76,6 @@ const InputField: React.FC<InputFieldProps> = ({
       />
 
       <div className="relative flex items-center">
-        {/* Icon */}
         <div className="absolute left-4 z-10">
           <div
             className="w-5 h-5 transition-colors duration-300"
@@ -90,8 +93,9 @@ const InputField: React.FC<InputFieldProps> = ({
           onBlur={onBlur}
           onFocus={onFocus}
           placeholder={placeholder}
+          disabled={disabled}
           autoComplete={showToggle ? 'new-password' : 'off'}
-          className="w-full py-4 pl-12 pr-12 outline-none transition-all duration-300"
+          className="w-full py-4 pl-12 pr-12 outline-none transition-all duration-300 disabled:opacity-60"
           style={{
             backgroundColor: 'var(--color-background)',
             color: 'var(--color-text)',
@@ -100,12 +104,12 @@ const InputField: React.FC<InputFieldProps> = ({
           }}
         />
 
-        {/* Toggle password visibility */}
         {showToggle && onToggleVisibility && (
           <button
             type="button"
             onClick={onToggleVisibility}
-            className="absolute right-4 transition-colors duration-300 hover:opacity-80"
+            disabled={disabled}
+            className="absolute right-4 transition-colors duration-300 hover:opacity-80 disabled:opacity-40"
             style={{ color: 'var(--color-text-muted)' }}
           >
             {isVisible ? (
@@ -121,7 +125,6 @@ const InputField: React.FC<InputFieldProps> = ({
           </button>
         )}
 
-        {/* Validation icon (apenas para campos sem toggle) */}
         {!showToggle && isTouched && (
           <div className="absolute right-4">
             {error ? (
@@ -142,7 +145,6 @@ const InputField: React.FC<InputFieldProps> = ({
       </div>
     </div>
 
-    {/* Error message */}
     {error && isTouched && (
       <p className="text-red-500 text-xs pl-1 flex items-center gap-1 animate-fade-in">
         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -156,6 +158,9 @@ const InputField: React.FC<InputFieldProps> = ({
 
 // ✅ COMPONENTE PRINCIPAL
 const FormRegister: React.FC = () => {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -170,6 +175,7 @@ const FormRegister: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Validações
   const validateName = (name: string): string | undefined => {
@@ -222,6 +228,14 @@ const FormRegister: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
+    // Limpa mensagens ao digitar
+    if (errors.general) {
+      setErrors(prev => ({ ...prev, general: undefined }));
+    }
+    if (successMessage) {
+      setSuccessMessage(null);
+    }
+
     const processedValue = name === 'username'
       ? value.toLowerCase().replace(/\s/g, '')
       : value;
@@ -229,7 +243,6 @@ const FormRegister: React.FC = () => {
     setFormData(prev => {
       const newData = { ...prev, [name]: processedValue };
 
-      // Validar em tempo real se já foi tocado
       if (touched[name]) {
         let error: string | undefined;
         switch (name) {
@@ -244,7 +257,6 @@ const FormRegister: React.FC = () => {
             break;
           case 'password':
             error = validatePassword(processedValue);
-            // Também revalidar confirmPassword
             if (touched.confirmPassword) {
               setErrors(prevErrors => ({
                 ...prevErrors,
@@ -295,6 +307,7 @@ const FormRegister: React.FC = () => {
     setFocusedField(field);
   };
 
+  // ✅ SUBMIT INTEGRADO COM O BACKEND
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -312,9 +325,91 @@ const FormRegister: React.FC = () => {
 
     if (!hasErrors && acceptTerms) {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setIsLoading(false);
-      console.log('Register:', formData);
+      setErrors({});
+      
+      try {
+        // Chama o serviço de registro
+        const response = await register(
+          formData.name.trim(),
+          formData.email.trim(),
+          formData.username.trim(),
+          formData.password
+        );
+
+        // Sucesso!
+        setSuccessMessage(response.message || 'Conta criada com sucesso!');
+        
+        // Limpa o formulário
+        setFormData({
+          name: '',
+          email: '',
+          username: '',
+          password: '',
+          confirmPassword: '',
+        });
+        setTouched({});
+        setAcceptTerms(false);
+
+        // Redireciona para login após 2 segundos
+        setTimeout(() => {
+          navigate('/login', { 
+            state: { 
+              message: 'Conta criada com sucesso! Faça login para continuar.',
+              email: formData.email 
+            } 
+          });
+        }, 2000);
+
+      } catch (error: any) {
+        console.error('Register error:', error);
+        
+        if (error.response) {
+          const status = error.response.status;
+          const message = error.response.data?.message;
+          
+          switch (status) {
+            case 400:
+              // Erros de validação do backend
+              if (message?.toLowerCase().includes('email')) {
+                setErrors({ email: message, general: undefined });
+              } else if (message?.toLowerCase().includes('url') || message?.toLowerCase().includes('link')) {
+                setErrors({ username: message, general: undefined });
+              } else if (message?.toLowerCase().includes('senha') || message?.toLowerCase().includes('password')) {
+                setErrors({ password: message, general: undefined });
+              } else {
+                setErrors({ general: message || 'Dados inválidos. Verifique os campos.' });
+              }
+              break;
+            case 409:
+              // Conflito - email ou URL já existe
+              if (message?.toLowerCase().includes('email')) {
+                setErrors({ email: 'Este email já está em uso', general: undefined });
+              } else if (message?.toLowerCase().includes('url') || message?.toLowerCase().includes('link')) {
+                setErrors({ username: 'Este link já está em uso', general: undefined });
+              } else {
+                setErrors({ general: message || 'Email ou link já está em uso.' });
+              }
+              break;
+            case 422:
+              setErrors({ general: message || 'Dados inválidos. Verifique os campos.' });
+              break;
+            case 429:
+              setErrors({ general: 'Muitas tentativas. Aguarde alguns minutos.' });
+              break;
+            case 500:
+              setErrors({ general: 'Erro no servidor. Tente novamente mais tarde.' });
+              break;
+            default:
+              setErrors({ general: message || 'Erro ao criar conta. Tente novamente.' });
+          }
+        } else if (error.request) {
+          setErrors({ general: 'Sem conexão com o servidor. Verifique sua internet.' });
+        } else {
+          setErrors({ general: 'Erro inesperado. Tente novamente.' });
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -359,24 +454,11 @@ const FormRegister: React.FC = () => {
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-10 blur-3xl"
           style={{ background: 'radial-gradient(circle, var(--color-primary-dark) 0%, transparent 70%)' }}
         />
-
-        <div
-          className="absolute top-20 left-[15%] w-2 h-2 rounded-full opacity-40 animate-float-slow"
-          style={{ backgroundColor: 'var(--color-primary)' }}
-        />
-        <div
-          className="absolute top-[40%] right-[10%] w-3 h-3 rounded-full opacity-30 animate-float-medium"
-          style={{ backgroundColor: 'var(--color-secondary)' }}
-        />
-        <div
-          className="absolute bottom-[20%] left-[20%] w-2 h-2 rounded-full opacity-40 animate-float-fast"
-          style={{ backgroundColor: 'var(--color-primary-dark)' }}
-        />
       </div>
 
       {/* Register Card */}
       <div
-        className="relative w-full max-w-md mx-auto p-8 md:p-10 transition-all duration-500 m-20"
+        className="relative w-full max-w-md mx-auto p-8 md:p-10 transition-all duration-500 my-20"
         style={{
           backgroundColor: 'var(--card-background-glass)',
           backdropFilter: 'blur(var(--blur-amount))',
@@ -427,6 +509,38 @@ const FormRegister: React.FC = () => {
           </p>
         </div>
 
+        {/* ✅ Mensagem de Sucesso */}
+        {successMessage && (
+          <div 
+            className="mb-6 p-4 rounded-lg border flex items-center gap-3 animate-fade-in"
+            style={{
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              borderColor: 'rgba(34, 197, 94, 0.3)',
+            }}
+          >
+            <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="text-green-500 text-sm">{successMessage}</span>
+          </div>
+        )}
+
+        {/* ✅ Erro geral */}
+        {errors.general && (
+          <div 
+            className="mb-6 p-4 rounded-lg border flex items-center gap-3 animate-fade-in"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderColor: 'rgba(239, 68, 68, 0.3)',
+            }}
+          >
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-red-500 text-sm">{errors.general}</span>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -439,6 +553,7 @@ const FormRegister: React.FC = () => {
             error={errors.name}
             isTouched={touched.name || false}
             isFocused={focusedField === 'name'}
+            disabled={isLoading}
             onChange={handleChange}
             onBlur={handleBlur}
             onFocus={() => handleFocus('name')}
@@ -459,6 +574,7 @@ const FormRegister: React.FC = () => {
             error={errors.email}
             isTouched={touched.email || false}
             isFocused={focusedField === 'email'}
+            disabled={isLoading}
             onChange={handleChange}
             onBlur={handleBlur}
             onFocus={() => handleFocus('email')}
@@ -514,7 +630,8 @@ const FormRegister: React.FC = () => {
                   onFocus={() => handleFocus('username')}
                   placeholder="seulink"
                   autoComplete="off"
-                  className="w-full py-4 outline-none transition-all duration-300"
+                  disabled={isLoading}
+                  className="w-full py-4 outline-none transition-all duration-300 disabled:opacity-60"
                   style={{
                     paddingLeft: '8rem',
                     paddingRight: '3rem',
@@ -576,6 +693,7 @@ const FormRegister: React.FC = () => {
               isFocused={focusedField === 'password'}
               showToggle
               isVisible={showPassword}
+              disabled={isLoading}
               onToggleVisibility={() => setShowPassword(!showPassword)}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -625,6 +743,7 @@ const FormRegister: React.FC = () => {
             isFocused={focusedField === 'confirmPassword'}
             showToggle
             isVisible={showConfirmPassword}
+            disabled={isLoading}
             onToggleVisibility={() => setShowConfirmPassword(!showConfirmPassword)}
             onChange={handleChange}
             onBlur={handleBlur}
@@ -653,6 +772,7 @@ const FormRegister: React.FC = () => {
                 type="checkbox"
                 checked={acceptTerms}
                 onChange={() => setAcceptTerms(!acceptTerms)}
+                disabled={isLoading}
                 className="sr-only"
               />
               <div
@@ -661,6 +781,7 @@ const FormRegister: React.FC = () => {
                   backgroundColor: acceptTerms ? 'var(--color-primary)' : 'var(--color-surface)',
                   border: `2px solid ${acceptTerms ? 'var(--color-primary)' : 'var(--color-border)'}`,
                   borderRadius: 'var(--border-radius-sm)',
+                  opacity: isLoading ? 0.6 : 1,
                 }}
               >
                 {acceptTerms && (
@@ -672,11 +793,11 @@ const FormRegister: React.FC = () => {
             </div>
             <span className="text-sm leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
               Aceito os{' '}
-              <a href="#" className="font-medium hover:opacity-80" style={{ color: 'var(--color-primary)' }}>
+              <a href="/terms" className="font-medium hover:opacity-80" style={{ color: 'var(--color-primary)' }}>
                 Termos de Uso
               </a>
               {' '}e a{' '}
-              <a href="#" className="font-medium hover:opacity-80" style={{ color: 'var(--color-primary)' }}>
+              <a href="/privacy" className="font-medium hover:opacity-80" style={{ color: 'var(--color-primary)' }}>
                 Política de Privacidade
               </a>
             </span>
