@@ -1,10 +1,11 @@
 // components/Sidebar/Sidebar.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/ThemeProvider";
-import { useAuth } from "../../hooks/useAuth"; // ✅ Adicionado
+import { useAuth } from "../../hooks/useAuth";
 import { VxoLogo } from "../LogoProps";
 import { VxoLogoSmall } from "../LogoPropsSmall";
+import api from "../../services/api";
 
 import {
   Home,
@@ -24,11 +25,15 @@ import {
   Sun,
   Moon,
   Lock,
-  LogOut,      // ✅ Adicionado
-  ChevronDown, // ✅ Adicionado
-  User,        // ✅ Adicionado
-  Loader2,     // ✅ Adicionado
+  LogOut,
+  ChevronDown,
+  User,
+  Loader2,
 } from "lucide-react";
+
+// ═══════════════════════════════════════════════════════════
+// TIPOS
+// ═══════════════════════════════════════════════════════════
 
 interface NavItem {
   icon: React.ReactNode;
@@ -44,37 +49,76 @@ interface NavSection {
   items: NavItem[];
 }
 
+// Tipo para a resposta do endpoint /user/profile
+interface SimpleProfileResponse {
+  profileImageUrl: string | null;
+  url: string;
+  name: string;
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ═══════════════════════════════════════════════════════════
+
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("Início");
   const { isDark, toggleTheme } = useTheme();
-  
-  // ✅ Auth hooks e estados para logout
+
+  // Auth hooks e estados para logout
   const { user, logout, isLoading } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // ✅ Função de Logout
+  // Estados para dados do perfil
+  const [profileData, setProfileData] = useState<SimpleProfileResponse | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileImageError, setProfileImageError] = useState(false);
+
+  // Buscar dados do perfil
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setIsLoadingProfile(true);
+        const response = await api.get<SimpleProfileResponse>("/user/profile");
+        
+        // ✅ Log para debug - remova depois
+        console.log("Profile data received:", response.data);
+        
+        setProfileData(response.data);
+        setProfileImageError(false);
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    // Só busca se o usuário estiver autenticado
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  // Função de Logout
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await logout();
-      // O AuthContext já redireciona para /login
     } catch (error) {
-      console.error('Logout failed:', error);
-      // Mesmo com erro, tenta redirecionar
-      window.location.href = '/login';
+      console.error("Logout failed:", error);
+      window.location.href = "/login";
     } finally {
       setIsLoggingOut(false);
       setShowUserMenu(false);
     }
   };
 
-  // ✅ Gera iniciais do usuário
+  // Gera iniciais do usuário
   const getUserInitials = (name?: string, email?: string): string => {
     if (name) {
-      const parts = name.split(' ');
+      const parts = name.split(" ");
       if (parts.length >= 2) {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
       }
@@ -83,7 +127,18 @@ const Sidebar = () => {
     if (email) {
       return email.slice(0, 2).toUpperCase();
     }
-    return 'US';
+    return "US";
+  };
+
+  // ✅ CORRIGIDO: Usar dados do profileData primeiro, depois fallback para user context
+  const displayName = profileData?.name || user?.name || "Usuário";
+  const profileUrl = profileData?.url || user?.urlName || "usuario";
+  const profileImageUrl = profileData?.profileImageUrl;
+
+  // Handler para erro de imagem
+  const handleImageError = () => {
+    console.log("Image failed to load:", profileImageUrl);
+    setProfileImageError(true);
   };
 
   const navSections: NavSection[] = [
@@ -97,7 +152,7 @@ const Sidebar = () => {
           href: "/dashboard/store",
           badge: "Novo",
           isBlock: false,
-          blockReason: "Novo"
+          blockReason: "Novo",
         },
       ],
     },
@@ -105,7 +160,11 @@ const Sidebar = () => {
       title: "Perfil",
       items: [
         { icon: <Image size={20} />, label: "Ativos", href: "/dashboard/assets" },
-        { icon: <Palette size={20} />, label: "Customização", href: "/dashboard/customization" },
+        {
+          icon: <Palette size={20} />,
+          label: "Customização",
+          href: "/dashboard/customization",
+        },
         { icon: <Tags size={20} />, label: "Tags", href: "/dashboard/tags" },
       ],
     },
@@ -113,15 +172,33 @@ const Sidebar = () => {
       title: "Widgets",
       items: [
         { icon: <Link2 size={20} />, label: "Links", href: "/dashboard/links" },
-        { icon: <Share2 size={20} />, label: "Redes Sociais", href: "/dashboard/socialmedia" },
-        { icon: <Code size={20} />, label: "Embeds", href: "/embeds", isBlock: true, blockReason: "Premium" },
+        {
+          icon: <Share2 size={20} />,
+          label: "Redes Sociais",
+          href: "/dashboard/socialmedia",
+        },
+        {
+          icon: <Code size={20} />,
+          label: "Embeds",
+          href: "/embeds",
+          isBlock: true,
+          blockReason: "Premium",
+        },
       ],
     },
     {
       title: "Conta",
       items: [
-        { icon: <Settings size={20} />, label: "Configurações", href: "/dashboard/settings" },
-        { icon: <Package size={20} />, label: "Inventário", href: "/dashboard/inventory" },
+        {
+          icon: <Settings size={20} />,
+          label: "Configurações",
+          href: "/dashboard/settings",
+        },
+        {
+          icon: <Package size={20} />,
+          label: "Inventário",
+          href: "/dashboard/inventory",
+        },
         { icon: <History size={20} />, label: "Histórico", href: "/dashboard/logs" },
       ],
     },
@@ -137,7 +214,61 @@ const Sidebar = () => {
     closed: { x: -300, opacity: 0 },
   };
 
-  // Componente NavItem atualizado com lógica de block
+  // ═══════════════════════════════════════════════════════════
+  // COMPONENTE: Avatar do Usuário (Reutilizável)
+  // ═══════════════════════════════════════════════════════════
+
+  const UserAvatar = ({ size = "default" }: { size?: "default" | "small" }) => {
+    const sizeClasses = size === "small" ? "w-8 h-8" : "w-9 h-9";
+    const textSize = size === "small" ? "text-xs" : "text-sm";
+
+    // Se está carregando, mostra skeleton
+    if (isLoadingProfile) {
+      return (
+        <div className={`${sizeClasses} rounded-full bg-[var(--color-surface)] animate-pulse`} />
+      );
+    }
+
+    // ✅ CORRIGIDO: Verificar se a URL é válida (não é uma URL de busca do Google)
+    const isValidImageUrl = profileImageUrl && 
+      !profileImageUrl.includes('google.com/imgres') && 
+      !profileImageError;
+
+    // Se tem imagem válida e não deu erro, mostra a imagem
+    if (isValidImageUrl) {
+      return (
+        <div className="relative">
+          <img
+            src={profileImageUrl}
+            alt={displayName}
+            className={`${sizeClasses} rounded-full object-cover border-2 border-[var(--color-primary)]/30`}
+            onError={handleImageError}
+          />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
+        </div>
+      );
+    }
+
+    // Fallback: mostra iniciais
+    return (
+      <div className="relative">
+        <div
+          className={`${sizeClasses} rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center`}
+        >
+          <span className={`text-white font-semibold ${textSize}`}>
+            {/* ✅ CORRIGIDO: Usar displayName (que vem do profileData primeiro) */}
+            {getUserInitials(displayName, user?.email)}
+          </span>
+        </div>
+        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // COMPONENTE: NavItem Desktop
+  // ═══════════════════════════════════════════════════════════
+
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const isActive = activeItem === item.label;
     const isBlocked = item.isBlock === true;
@@ -166,14 +297,12 @@ const Sidebar = () => {
             relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--border-radius-sm)]
             transition-all duration-300 group
             
-            ${isBlocked
-              ? "cursor-not-allowed opacity-50"
-              : "cursor-pointer"
-            }
+            ${isBlocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
             
-            ${isActive && !isBlocked
-              ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
-              : isBlocked
+            ${
+              isActive && !isBlocked
+                ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
+                : isBlocked
                 ? "text-[var(--color-text-muted)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
             }
@@ -189,7 +318,11 @@ const Sidebar = () => {
             />
           )}
 
-          <span className={`flex-shrink-0 ${isActive && !isBlocked ? "text-[var(--color-primary)]" : ""}`}>
+          <span
+            className={`flex-shrink-0 ${
+              isActive && !isBlocked ? "text-[var(--color-primary)]" : ""
+            }`}
+          >
             {item.icon}
           </span>
 
@@ -199,7 +332,9 @@ const Sidebar = () => {
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
-                className={`text-sm font-medium whitespace-nowrap overflow-hidden ${isBlocked ? "line-through" : ""}`}
+                className={`text-sm font-medium whitespace-nowrap overflow-hidden ${
+                  isBlocked ? "line-through" : ""
+                }`}
               >
                 {item.label}
               </motion.span>
@@ -236,14 +371,16 @@ const Sidebar = () => {
           )}
 
           {isCollapsed && (
-            <div className="
+            <div
+              className="
               absolute left-full ml-3 px-3 py-1.5 rounded-[var(--border-radius-sm)]
               bg-[var(--color-background)] border border-[var(--color-border)]
               text-[var(--color-text)] text-sm font-medium
               opacity-0 invisible group-hover:opacity-100 group-hover:visible
               transition-all duration-200 whitespace-nowrap z-50
               shadow-lg flex items-center gap-2
-            ">
+            "
+            >
               <span className={isBlocked ? "line-through opacity-60" : ""}>
                 {item.label}
               </span>
@@ -278,7 +415,7 @@ const Sidebar = () => {
                     transparent 10px,
                     var(--color-text-muted) 10px,
                     var(--color-text-muted) 11px
-                  )`
+                  )`,
                 }}
               />
             </div>
@@ -287,6 +424,10 @@ const Sidebar = () => {
       </motion.div>
     );
   };
+
+  // ═══════════════════════════════════════════════════════════
+  // COMPONENTE: NavItem Mobile
+  // ═══════════════════════════════════════════════════════════
 
   const MobileNavItemComponent = ({ item }: { item: NavItem }) => {
     const isActive = activeItem === item.label;
@@ -312,17 +453,15 @@ const Sidebar = () => {
         relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--border-radius-sm)]
         transition-all duration-300
         
-        ${isBlocked
-            ? "cursor-not-allowed opacity-50"
-            : "cursor-pointer"
-          }
+        ${isBlocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
         
-        ${isActive && !isBlocked
+        ${
+          isActive && !isBlocked
             ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
             : isBlocked
-              ? "text-[var(--color-text-muted)]"
-              : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-          }
+            ? "text-[var(--color-text-muted)]"
+            : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+        }
       `}
         whileHover={isBlocked ? {} : { x: 4 }}
         whileTap={isBlocked ? {} : { scale: 0.98 }}
@@ -334,11 +473,15 @@ const Sidebar = () => {
           />
         )}
 
-        <span className={isActive && !isBlocked ? "text-[var(--color-primary)]" : ""}>
+        <span
+          className={isActive && !isBlocked ? "text-[var(--color-primary)]" : ""}
+        >
           {item.icon}
         </span>
 
-        <span className={`text-sm font-medium ${isBlocked ? "line-through" : ""}`}>
+        <span
+          className={`text-sm font-medium ${isBlocked ? "line-through" : ""}`}
+        >
           {item.label}
         </span>
 
@@ -364,13 +507,18 @@ const Sidebar = () => {
     );
   };
 
-  // ✅ Desktop Sidebar Content
+  // ═══════════════════════════════════════════════════════════
+  // Desktop Sidebar Content
+  // ═══════════════════════════════════════════════════════════
+
   const DesktopSidebarContent = () => (
     <>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
         <motion.div
-          className={`flex items-center gap-3 ${isCollapsed ? "justify-center w-full" : ""}`}
+          className={`flex items-center gap-3 ${
+            isCollapsed ? "justify-center w-full" : ""
+          }`}
         >
           <AnimatePresence mode="wait">
             {isCollapsed ? (
@@ -400,7 +548,9 @@ const Sidebar = () => {
                   exit={{ opacity: 0, x: -10 }}
                   className="flex flex-col"
                 >
-                  <span className="text-[var(--color-text-muted)] text-xs">Dashboard</span>
+                  <span className="text-[var(--color-text-muted)] text-xs">
+                    Dashboard
+                  </span>
                 </motion.div>
               </motion.div>
             )}
@@ -414,7 +564,11 @@ const Sidebar = () => {
             bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]
             text-[var(--color-text-muted)] hover:text-[var(--color-text)]
             transition-all duration-300
-            ${isCollapsed ? "absolute -right-3 top-6 shadow-lg border border-[var(--color-border)] bg-[var(--color-background)]" : ""}
+            ${
+              isCollapsed
+                ? "absolute -right-3 top-6 shadow-lg border border-[var(--color-border)] bg-[var(--color-background)]"
+                : ""
+            }
           `}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -512,7 +666,7 @@ const Sidebar = () => {
           </AnimatePresence>
         </motion.button>
 
-        {/* ✅ User Card com Dropdown - DESKTOP */}
+        {/* User Card com Dropdown - DESKTOP */}
         <div className="relative mt-3">
           <motion.div
             onClick={() => !isCollapsed && setShowUserMenu(!showUserMenu)}
@@ -526,15 +680,8 @@ const Sidebar = () => {
             `}
             whileHover={{ scale: 1.02 }}
           >
-            {/* Avatar */}
-            <div className="relative">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">
-                  {getUserInitials(user?.name, user?.email)}
-                </span>
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
-            </div>
+            {/* Avatar com imagem do perfil */}
+            <UserAvatar />
 
             <AnimatePresence>
               {!isCollapsed && (
@@ -544,17 +691,19 @@ const Sidebar = () => {
                   exit={{ opacity: 0 }}
                   className="flex-1 min-w-0"
                 >
+                  {/* ✅ CORRIGIDO: Usar displayName */}
                   <p className="text-sm font-semibold text-[var(--color-text)] truncate">
-                    {user?.name || 'Usuário'}
+                    {displayName}
                   </p>
+                  {/* URL do perfil vindo do endpoint */}
                   <p className="text-xs text-[var(--color-text-muted)] truncate">
-                    vxo.lat/{user?.urlName || 'usuario'}
+                    vxo.lat/{profileUrl}
                   </p>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* ✅ Dropdown Arrow */}
+            {/* Dropdown Arrow */}
             <AnimatePresence>
               {!isCollapsed && (
                 <motion.div
@@ -563,13 +712,16 @@ const Sidebar = () => {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <ChevronDown size={16} className="text-[var(--color-text-muted)]" />
+                  <ChevronDown
+                    size={16}
+                    className="text-[var(--color-text-muted)]"
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
 
-          {/* ✅ Dropdown Menu - DESKTOP */}
+          {/* Dropdown Menu - DESKTOP */}
           <AnimatePresence>
             {showUserMenu && !isCollapsed && (
               <motion.div
@@ -579,21 +731,34 @@ const Sidebar = () => {
                 transition={{ duration: 0.15 }}
                 className="absolute bottom-full left-0 right-0 mb-2 p-2 rounded-[var(--border-radius-md)] border shadow-lg z-50"
                 style={{
-                  backgroundColor: 'var(--color-background)',
-                  borderColor: 'var(--color-border)',
+                  backgroundColor: "var(--color-background)",
+                  borderColor: "var(--color-border)",
                 }}
               >
-                {/* Profile Button */}
+                {/* View Profile Button */}
                 <motion.button
                   onClick={() => {
                     setShowUserMenu(false);
-                    window.location.href = '/dashboard/settings';
+                    window.open(`https://vxo.lat/${profileUrl}`, "_blank");
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] transition-all duration-200"
                   whileHover={{ x: 4 }}
                 >
                   <User size={18} />
-                  <span className="text-sm">Meu Perfil</span>
+                  <span className="text-sm">Ver Perfil Público</span>
+                </motion.button>
+
+                {/* Profile Settings Button */}
+                <motion.button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    window.location.href = "/dashboard/settings";
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] transition-all duration-200"
+                  whileHover={{ x: 4 }}
+                >
+                  <Settings size={18} />
+                  <span className="text-sm">Configurações</span>
                 </motion.button>
 
                 {/* Divider */}
@@ -613,30 +778,37 @@ const Sidebar = () => {
                     <LogOut size={18} />
                   )}
                   <span className="text-sm">
-                    {isLoggingOut ? 'Saindo...' : 'Sair da conta'}
+                    {isLoggingOut ? "Saindo..." : "Sair da conta"}
                   </span>
                 </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ✅ Tooltip para modo collapsed com opção de logout */}
+          {/* Tooltip para modo collapsed com opção de logout */}
           {isCollapsed && (
-            <div className="
+            <div
+              className="
               absolute left-full ml-3 px-3 py-2 rounded-[var(--border-radius-md)]
               bg-[var(--color-background)] border border-[var(--color-border)]
               opacity-0 invisible group-hover:opacity-100 group-hover:visible
               transition-all duration-200 whitespace-nowrap z-50
               shadow-lg
-            ">
+            "
+            >
               <div className="flex flex-col gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text)]">
-                    {user?.name || 'Usuário'}
-                  </p>
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    vxo.lat/{user?.urlName || 'usuario'}
-                  </p>
+                <div className="flex items-center gap-3">
+                  {/* Mini avatar no tooltip */}
+                  <UserAvatar size="small" />
+                  <div>
+                    {/* ✅ CORRIGIDO: Usar displayName */}
+                    <p className="text-sm font-semibold text-[var(--color-text)]">
+                      {displayName}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      vxo.lat/{profileUrl}
+                    </p>
+                  </div>
                 </div>
                 <div className="border-t border-[var(--color-border)] pt-2">
                   <button
@@ -649,7 +821,7 @@ const Sidebar = () => {
                     ) : (
                       <LogOut size={14} />
                     )}
-                    <span>{isLoggingOut ? 'Saindo...' : 'Sair'}</span>
+                    <span>{isLoggingOut ? "Saindo..." : "Sair"}</span>
                   </button>
                 </div>
               </div>
@@ -660,14 +832,19 @@ const Sidebar = () => {
     </>
   );
 
-  // ✅ Mobile Sidebar Content
+  // ═══════════════════════════════════════════════════════════
+  // Mobile Sidebar Content
+  // ═══════════════════════════════════════════════════════════
+
   const MobileSidebarContent = () => (
     <>
       <div className="flex items-center justify-center p-4 border-b border-[var(--color-border)]">
         <motion.div className="flex items-center gap-3">
           <VxoLogo />
           <div className="flex flex-col">
-            <span className="text-[var(--color-text-muted)] text-xs">Dashboard</span>
+            <span className="text-[var(--color-text-muted)] text-xs">
+              Dashboard
+            </span>
           </div>
         </motion.div>
       </div>
@@ -700,40 +877,40 @@ const Sidebar = () => {
           </span>
         </motion.button>
 
-        {/* ✅ User Card com Dropdown - MOBILE */}
+        {/* User Card com Dropdown - MOBILE */}
         <div className="relative mt-3">
           <motion.div
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-3 p-3 rounded-[var(--border-radius-md)] bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10 border border-[var(--color-border)] cursor-pointer hover:from-[var(--color-primary)]/20 hover:to-[var(--color-secondary)]/20 transition-all duration-300"
             whileHover={{ scale: 1.02 }}
           >
-            <div className="relative">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">
-                  {getUserInitials(user?.name, user?.email)}
-                </span>
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
-            </div>
+            {/* Avatar com imagem do perfil */}
+            <UserAvatar />
+
             <div className="flex-1 min-w-0">
+              {/* ✅ CORRIGIDO: Usar displayName */}
               <p className="text-sm font-semibold text-[var(--color-text)] truncate">
-                {user?.name || 'Usuário'}
+                {displayName}
               </p>
+              {/* URL do perfil vindo do endpoint */}
               <p className="text-xs text-[var(--color-text-muted)] truncate">
-                vxo.lat/{user?.urlName || 'usuario'}
+                vxo.lat/{profileUrl}
               </p>
             </div>
-            
-            {/* ✅ Dropdown Arrow */}
+
+            {/* Dropdown Arrow */}
             <motion.div
               animate={{ rotate: showUserMenu ? 180 : 0 }}
               transition={{ duration: 0.2 }}
             >
-              <ChevronDown size={16} className="text-[var(--color-text-muted)]" />
+              <ChevronDown
+                size={16}
+                className="text-[var(--color-text-muted)]"
+              />
             </motion.div>
           </motion.div>
 
-          {/* ✅ Dropdown Menu - MOBILE */}
+          {/* Dropdown Menu - MOBILE */}
           <AnimatePresence>
             {showUserMenu && (
               <motion.div
@@ -743,22 +920,36 @@ const Sidebar = () => {
                 transition={{ duration: 0.15 }}
                 className="absolute bottom-full left-0 right-0 mb-2 p-2 rounded-[var(--border-radius-md)] border shadow-lg z-50"
                 style={{
-                  backgroundColor: 'var(--color-background)',
-                  borderColor: 'var(--color-border)',
+                  backgroundColor: "var(--color-background)",
+                  borderColor: "var(--color-border)",
                 }}
               >
-                {/* Profile Button */}
+                {/* View Profile Button */}
                 <motion.button
                   onClick={() => {
                     setShowUserMenu(false);
                     setIsMobileOpen(false);
-                    window.location.href = '/dashboard/profile';
+                    window.open(`https://vxo.lat/${profileUrl}`, "_blank");
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] transition-all duration-200"
                   whileHover={{ x: 4 }}
                 >
                   <User size={18} />
-                  <span className="text-sm">Meu Perfil</span>
+                  <span className="text-sm">Ver Perfil Público</span>
+                </motion.button>
+
+                {/* Profile Settings Button */}
+                <motion.button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setIsMobileOpen(false);
+                    window.location.href = "/dashboard/settings";
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] transition-all duration-200"
+                  whileHover={{ x: 4 }}
+                >
+                  <Settings size={18} />
+                  <span className="text-sm">Configurações</span>
                 </motion.button>
 
                 {/* Divider */}
@@ -778,7 +969,7 @@ const Sidebar = () => {
                     <LogOut size={18} />
                   )}
                   <span className="text-sm">
-                    {isLoggingOut ? 'Saindo...' : 'Sair da conta'}
+                    {isLoggingOut ? "Saindo..." : "Sair da conta"}
                   </span>
                 </motion.button>
               </motion.div>
@@ -788,6 +979,10 @@ const Sidebar = () => {
       </div>
     </>
   );
+
+  // ═══════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════
 
   return (
     <>

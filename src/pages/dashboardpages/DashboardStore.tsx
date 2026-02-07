@@ -26,6 +26,7 @@ import {
   ImageIcon,
   Video,
   FileCode,
+  User,
 } from "lucide-react";
 import React from "react";
 
@@ -45,7 +46,7 @@ interface StoreItem {
   price: number;
   svgContent?: string;
   svgUrl?: string;
-  imageUrl?: string;
+  imageUrl?: string; // Para frames: URL do PNG/GIF da moldura
   videoUrl?: string;
   thumbnailUrl?: string;
   preview?: string;
@@ -59,13 +60,15 @@ interface StoreItem {
   unlockLevel?: number;
 }
 
-interface UserInventory {
-  coins: number;
-  items: StoreItem[];
-}
+// ═══════════════════════════════════════════════════════════
+// CONFIGURAÇÃO - URL da foto de perfil para preview
+// ═══════════════════════════════════════════════════════════
+
+// Esta URL seria substituída pela foto real do usuário logado
+const PREVIEW_PROFILE_IMAGE = "https://i.pravatar.cc/300?u=preview";
 
 // ═══════════════════════════════════════════════════════════
-// DADOS MOCK - SVGs corrigidos (brancos e sem tamanho fixo)
+// DADOS MOCK - Com molduras que são PNGs transparentes
 // ═══════════════════════════════════════════════════════════
 
 const MOCK_ITEMS: StoreItem[] = [
@@ -176,16 +179,17 @@ const MOCK_ITEMS: StoreItem[] = [
     isLimited: false,
   },
 
-  // Molduras (Imagens)
+  // ═══════════════════════════════════════════════════════════
+  // MOLDURAS - PNG/GIF transparentes que ficam sobre a foto
+  // ═══════════════════════════════════════════════════════════
   {
     id: "frame_1",
-    name: "Moldura Dourada",
-    description: "Moldura elegante em tom dourado",
+    name: "Asa Branca",
+    description: "Moldura elegante que envolve sua foto",
     type: "frame",
     rarity: "rare",
     price: 800,
-    imageUrl:
-      "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=400&h=400&fit=crop",
+    imageUrl: "https://vxo.lat/molduras/m-vxo-1.png",
     isOwned: false,
     isEquipped: false,
     isFavorite: false,
@@ -193,32 +197,432 @@ const MOCK_ITEMS: StoreItem[] = [
   },
   {
     id: "frame_2",
-    name: "Moldura Neon",
-    description: "Moldura com efeito neon vibrante",
+    name: "Asa Preta",
+    description: "Moldura elegante que envolve sua foto",
     type: "frame",
-    rarity: "epic",
-    price: 1500,
-    imageUrl:
-      "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=400&fit=crop",
-    isOwned: true,
-    isEquipped: true,
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-2.png",
+    isOwned: false,
+    isEquipped: false,
     isFavorite: false,
     isLimited: false,
   },
   {
     id: "frame_3",
-    name: "Moldura Cristal",
-    description: "Moldura translúcida com brilho cristalino",
+    name: "Lua Giratória",
+    description: "Moldura elegante que envolve sua foto",
     type: "frame",
-    rarity: "legendary",
-    price: 2500,
-    imageUrl:
-      "https://images.unsplash.com/photo-1518176258769-f227c798150e?w=400&h=400&fit=crop",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-3.png",
     isOwned: false,
     isEquipped: false,
-    isFavorite: true,
-    isLimited: true,
-    discount: 15,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_4",
+    name: "Coelhinho do Amor",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-4.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_5",
+    name: "Coruja Fofinha",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-5.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_6",
+    name: "Fadas Dançarinas",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-6.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_7",
+    name: "Raios Enérgicos",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-7.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_8",
+    name: "Peixes Espirituais",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-8.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_9",
+    name: "Brilhando e Cintilando",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-9.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_10",
+    name: "Vibe Floral",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-10.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_11",
+    name: "Alma Dorminhoca",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-11.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_12",
+    name: "Calor de Matar",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-12.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_13",
+    name: "Magia Mística",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-13.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_14",
+    name: "Capuz GatoPunk",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-14.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_15",
+    name: "Gatinho Saltitante",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-15.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_16",
+    name: "Capuz GatoSono Preto",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-16.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_17",
+    name: "Capuz GatoSono Branco",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-17.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_18",
+    name: "Capuz GatoSono Caramelo",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-18.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_19",
+    name: "Cesta de +3",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-19.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_20",
+    name: "Raios Elétricos",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-20.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_21",
+    name: "Tubarão Robô",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-21.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_22",
+    name: "Espiral Místico",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-22.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_23",
+    name: "Cobrinha Comilona",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-23.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_24",
+    name: "Poção Mágica",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-24.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_25",
+    name: "Arcade Retrô",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-25.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_26",
+    name: "Bobo da Corte",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-26.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_27",
+    name: "Jutsu Ninja",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-27.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_28",
+    name: "Brilho Dourado",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-28.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_29",
+    name: "Magia Suprema",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-29.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_30",
+    name: "Ossos Assombrados",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-30.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_31",
+    name: "Ravena Negra",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-31.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_32",
+    name: "Tímido e Apaixonado",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-32.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_33",
+    name: "Poeira Espacial",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-33.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
+  },
+  {
+    id: "frame_34",
+    name: "Anjinho",
+    description: "Moldura elegante que envolve sua foto",
+    type: "frame",
+    rarity: "rare",
+    price: 800,
+    imageUrl: "https://vxo.lat/molduras/m-vxo-34.png",
+    isOwned: false,
+    isEquipped: false,
+    isFavorite: false,
+    isLimited: false,
   },
 
   // Efeitos (Vídeos)
@@ -326,10 +730,12 @@ const getRarityColor = (rarity: ItemRarity): string => {
 
 const getRarityGlow = (rarity: ItemRarity): string => {
   const glows = {
-    common: "0 0 20px rgba(156, 163, 175, 0.5), 0 0 40px rgba(156, 163, 175, 0.3)",
+    common:
+      "0 0 20px rgba(156, 163, 175, 0.5), 0 0 40px rgba(156, 163, 175, 0.3)",
     rare: "0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2)",
     epic: "0 0 20px rgba(168, 85, 247, 0.6), 0 0 40px rgba(168, 85, 247, 0.4), 0 0 60px rgba(168, 85, 247, 0.2)",
-    legendary: "0 0 25px rgba(245, 158, 11, 0.7), 0 0 50px rgba(245, 158, 11, 0.5), 0 0 75px rgba(245, 158, 11, 0.3)",
+    legendary:
+      "0 0 25px rgba(245, 158, 11, 0.7), 0 0 50px rgba(245, 158, 11, 0.5), 0 0 75px rgba(245, 158, 11, 0.3)",
   };
   return glows[rarity];
 };
@@ -370,6 +776,124 @@ const calculateDiscount = (price: number, discount?: number): number => {
 };
 
 // ═══════════════════════════════════════════════════════════
+// COMPONENTE: Preview de Moldura com Foto de Perfil
+// ═══════════════════════════════════════════════════════════
+
+const FramePreview = ({
+  frameUrl,
+  size = "medium",
+  profileImageUrl = PREVIEW_PROFILE_IMAGE,
+  rarity,
+  isAnimated = false,
+}: {
+  frameUrl: string;
+  size?: "small" | "medium" | "large";
+  profileImageUrl?: string;
+  rarity: ItemRarity;
+  isAnimated?: boolean;
+}) => {
+  const [frameError, setFrameError] = useState(false);
+  const [profileError, setProfileError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Configuração de tamanhos
+  const sizeConfig = {
+    small: {
+      container: "w-16 h-16",
+      profile: "w-10 h-10",
+      frame: "w-16 h-16",
+    },
+    medium: {
+      container: "w-32 h-32",
+      profile: "w-28 h-28",
+      frame: "w-32 h-32",
+    },
+    large: {
+      container: "w-48 h-48",
+      profile: "w-32 h-32",
+      frame: "w-48 h-48",
+    },
+  };
+
+  const config = sizeConfig[size];
+
+  return (
+    <div
+      className={`${config.container} relative flex items-center justify-center`}
+      style={{
+        filter: `drop-shadow(${getRarityGlow(rarity)})`,
+      }}
+    >
+      {/* Loading */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center z-30">
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--color-text-muted)]" />
+        </div>
+      )}
+
+      {/* Foto de Perfil (camada inferior) */}
+      <div
+        className={`${config.profile} rounded-full overflow-hidden absolute z-10`}
+      >
+        {!profileError ? (
+          <img
+            src={profileImageUrl}
+            alt="Preview do perfil"
+            className="w-full h-full object-cover"
+            onLoad={() => setIsLoading(false)}
+            onError={() => {
+              setProfileError(true);
+              setIsLoading(false);
+            }}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] flex items-center justify-center">
+            <User className="w-1/2 h-1/2 text-white/80" />
+          </div>
+        )}
+      </div>
+
+      {/* Moldura (camada superior - PNG/GIF transparente) */}
+      {!frameError && frameUrl && (
+        <img
+          src={frameUrl}
+          alt="Moldura"
+          className={`${config.frame} absolute z-20 object-contain pointer-events-none`}
+          style={{
+            // Garante que a moldura fique perfeitamente centralizada
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+          onError={() => setFrameError(true)}
+        />
+      )}
+
+      {/* Efeito de brilho animado para molduras legendárias */}
+      {rarity === "legendary" && (
+        <motion.div
+          className="absolute inset-0 rounded-full z-5 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle, transparent 40%, ${getRarityColor(
+              rarity
+            )}20 100%)`,
+          }}
+          animate={{
+            opacity: [0.5, 1, 0.5],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
 // COMPONENTE: Preview de Mídia por Tipo com Brilho
 // ═══════════════════════════════════════════════════════════
 
@@ -377,10 +901,12 @@ const ItemMediaPreview = ({
   item,
   size = "medium",
   showPlayButton = false,
+  userProfileImage,
 }: {
   item: StoreItem;
   size?: "small" | "medium" | "large";
   showPlayButton?: boolean;
+  userProfileImage?: string;
 }) => {
   const [imageError, setImageError] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -436,7 +962,7 @@ const ItemMediaPreview = ({
               }}
             />
           </div>
-          
+
           {/* SVG principal com drop-shadow */}
           <div
             className={`${config.svg} relative z-10`}
@@ -451,8 +977,9 @@ const ItemMediaPreview = ({
 
     if (item.svgUrl) {
       return (
-        <div className={`${config.container} flex items-center justify-center p-4 relative`}>
-          {/* Brilho de fundo */}
+        <div
+          className={`${config.container} flex items-center justify-center p-4 relative`}
+        >
           <div
             className="absolute inset-0 flex items-center justify-center"
             style={{ filter: "blur(20px)", opacity: 0.6 }}
@@ -462,7 +989,7 @@ const ItemMediaPreview = ({
               style={{ backgroundColor: getRarityColor(item.rarity) }}
             />
           </div>
-          
+
           <img
             src={item.svgUrl}
             alt={item.name}
@@ -479,7 +1006,9 @@ const ItemMediaPreview = ({
 
     // Fallback para badge
     return (
-      <div className={`${config.container} flex items-center justify-center relative`}>
+      <div
+        className={`${config.container} flex items-center justify-center relative`}
+      >
         <div
           className="absolute inset-0 flex items-center justify-center"
           style={{ filter: "blur(20px)", opacity: 0.5 }}
@@ -500,36 +1029,76 @@ const ItemMediaPreview = ({
     );
   }
 
-  // Frame (Imagem)
+  // ═══════════════════════════════════════════════════════════
+  // FRAME - Preview com foto de perfil + moldura sobreposta
+  // ═══════════════════════════════════════════════════════════
   if (item.type === "frame") {
+    // Detectar se é GIF animado
+    const isAnimated = item.imageUrl?.toLowerCase().endsWith(".gif");
+
     if (item.imageUrl && !imageError) {
       return (
-        <div className={`${config.container} relative overflow-hidden`}>
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-surface)]">
-              <Loader2 className="w-8 h-8 animate-spin text-[var(--color-text-muted)]" />
-            </div>
-          )}
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            className="w-full h-full object-cover transition-opacity duration-300"
-            style={{ opacity: isLoading ? 0 : 1 }}
-            onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setImageError(true);
-              setIsLoading(false);
-            }}
+        <div
+          className={`${config.container} flex items-center justify-center relative`}
+          style={{
+            background: `radial-gradient(circle, ${getRarityColor(
+              item.rarity
+            )}10, transparent)`,
+          }}
+        >
+          <FramePreview
+            frameUrl={item.imageUrl}
+            size={size}
+            profileImageUrl={userProfileImage || PREVIEW_PROFILE_IMAGE}
+            rarity={item.rarity}
+            isAnimated={isAnimated}
           />
         </div>
       );
     }
 
+    // Fallback para frame sem imagem
     return (
       <div
-        className={`${config.container} flex items-center justify-center bg-[var(--color-surface)]`}
+        className={`${config.container} flex items-center justify-center bg-[var(--color-surface)] relative`}
       >
-        <ImageIcon className={`${config.icon} text-[var(--color-text-muted)]`} />
+        {/* Preview genérico com círculo e borda */}
+        <div className="relative">
+          {/* Foto de perfil placeholder */}
+          <div
+            className={`${
+              size === "small"
+                ? "w-10 h-10"
+                : size === "medium"
+                ? "w-20 h-20"
+                : "w-32 h-32"
+            } rounded-full bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 flex items-center justify-center`}
+          >
+            <User
+              className={`${
+                size === "small"
+                  ? "w-5 h-5"
+                  : size === "medium"
+                  ? "w-10 h-10"
+                  : "w-16 h-16"
+              } text-[var(--color-text-muted)]`}
+            />
+          </div>
+
+          {/* Borda decorativa representando a moldura */}
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              border: `3px solid ${getRarityColor(item.rarity)}`,
+              boxShadow: getRarityGlow(item.rarity),
+            }}
+          />
+        </div>
+
+        {/* Ícone indicando que é uma moldura */}
+        <div className="absolute bottom-2 right-2 p-1 rounded-full bg-[var(--color-background)]/80">
+          <Frame size={14} style={{ color: getRarityColor(item.rarity) }} />
+        </div>
       </div>
     );
   }
@@ -538,11 +1107,13 @@ const ItemMediaPreview = ({
   if (item.type === "effect") {
     if (item.videoUrl && !videoError) {
       return (
-        <div className={`${config.container} relative overflow-hidden bg-black`}>
+        <div
+          className={`${config.container} relative overflow-hidden bg-black`}
+        >
           <video
             ref={videoRef}
             src={item.videoUrl}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover w-5"
             loop
             muted
             playsInline
@@ -572,7 +1143,9 @@ const ItemMediaPreview = ({
     }
 
     return (
-      <div className={`${config.container} flex items-center justify-center bg-black`}>
+      <div
+        className={`${config.container} flex items-center justify-center bg-black`}
+      >
         <Video className={`${config.icon} text-white/50`} />
       </div>
     );
@@ -603,8 +1176,9 @@ const ItemMediaPreview = ({
     }
 
     return (
-      <div className={`${config.container} flex items-center justify-center relative`}>
-        {/* Brilho para bundle */}
+      <div
+        className={`${config.container} flex items-center justify-center relative`}
+      >
         <div
           className="absolute inset-0 flex items-center justify-center"
           style={{ filter: "blur(20px)", opacity: 0.5 }}
@@ -629,7 +1203,7 @@ const ItemMediaPreview = ({
 };
 
 // ═══════════════════════════════════════════════════════════
-// COMPONENTES BASE
+// COMPONENTES BASE (sem alterações)
 // ═══════════════════════════════════════════════════════════
 
 const StoreCard = ({
@@ -646,35 +1220,6 @@ const StoreCard = ({
   >
     {children}
   </motion.div>
-);
-
-const SectionHeader = ({
-  icon: Icon,
-  title,
-  description,
-  action,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-}) => (
-  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4 sm:mb-6">
-    <div className="flex items-start gap-3 sm:gap-4">
-      <div className="p-2 sm:p-3 rounded-[var(--border-radius-md)] bg-[var(--color-primary)]/10 flex-shrink-0">
-        <Icon size={20} className="sm:w-6 sm:h-6 text-[var(--color-primary)]" />
-      </div>
-      <div className="min-w-0">
-        <h2 className="text-base sm:text-lg font-semibold text-[var(--color-text)]">
-          {title}
-        </h2>
-        <p className="text-xs sm:text-sm text-[var(--color-text-muted)] mt-0.5 sm:mt-1">
-          {description}
-        </p>
-      </div>
-    </div>
-    {action}
-  </div>
 );
 
 const Modal = ({
@@ -825,12 +1370,13 @@ const EmptyState = ({ type }: { type: StoreItemType | "all" }) => {
 };
 
 // ═══════════════════════════════════════════════════════════
-// COMPONENTE: Item da Loja
+// COMPONENTE: Item da Loja (atualizado para frames)
 // ═══════════════════════════════════════════════════════════
 
 const StoreItemCard = ({
   item,
   userCoins,
+  userProfileImage,
   onPreview,
   onPurchase,
   onEquip,
@@ -839,6 +1385,7 @@ const StoreItemCard = ({
 }: {
   item: StoreItem;
   userCoins: number;
+  userProfileImage?: string;
   onPreview: () => void;
   onPurchase: () => void;
   onEquip: () => void;
@@ -889,6 +1436,14 @@ const StoreItemCard = ({
               POSSUI
             </span>
           )}
+          {/* Badge para molduras animadas */}
+          {item.type === "frame" &&
+            item.imageUrl?.toLowerCase().endsWith(".gif") && (
+              <span className="px-2 py-1 rounded-full bg-purple-500/90 text-white text-[10px] font-bold flex items-center gap-1 backdrop-blur-sm">
+                <Sparkles size={10} />
+                ANIMADA
+              </span>
+            )}
         </div>
 
         <motion.button
@@ -927,6 +1482,7 @@ const StoreItemCard = ({
           item={item}
           size="medium"
           showPlayButton={item.type === "effect"}
+          userProfileImage={userProfileImage}
         />
 
         {/* Efeito de brilho no hover */}
@@ -1131,6 +1687,9 @@ const DashboardStore = () => {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
+
+  // ✅ Foto do usuário logado (substituir pela real do contexto de auth)
+  const userProfileImage = PREVIEW_PROFILE_IMAGE;
 
   // Carregar itens da loja
   const loadStoreItems = useCallback(async () => {
@@ -1512,6 +2071,7 @@ const DashboardStore = () => {
                   key={item.id}
                   item={item}
                   userCoins={userCoins}
+                  userProfileImage={userProfileImage}
                   onPreview={() => handlePreview(item)}
                   onPurchase={() => handlePurchaseClick(item)}
                   onEquip={() => handleEquip(item)}
@@ -1539,7 +2099,7 @@ const DashboardStore = () => {
           <div className="space-y-6">
             {/* Preview grande */}
             <div
-              className="relative rounded-[var(--border-radius-lg)] overflow-hidden"
+              className="relative rounded-[var(--border-radius-lg)] overflow-hidden flex items-center justify-center py-8"
               style={{
                 background: `linear-gradient(135deg, ${getRarityColor(
                   selectedItem.rarity
@@ -1550,6 +2110,7 @@ const DashboardStore = () => {
                 item={selectedItem}
                 size="large"
                 showPlayButton={selectedItem.type === "effect"}
+                userProfileImage={userProfileImage}
               />
 
               {/* Badges */}
@@ -1572,6 +2133,13 @@ const DashboardStore = () => {
                     EQUIPADO
                   </span>
                 )}
+                {selectedItem.type === "frame" &&
+                  selectedItem.imageUrl?.toLowerCase().endsWith(".gif") && (
+                    <span className="px-3 py-1.5 rounded-full bg-purple-500/90 text-white text-xs font-bold flex items-center gap-1 backdrop-blur-sm">
+                      <Sparkles size={12} />
+                      ANIMADA
+                    </span>
+                  )}
               </div>
             </div>
 
@@ -1732,14 +2300,18 @@ const DashboardStore = () => {
             {/* Item preview pequeno */}
             <div className="flex items-center gap-4 p-4 rounded-[var(--border-radius-md)] bg-[var(--color-surface)]">
               <div
-                className="rounded-[var(--border-radius-md)] overflow-hidden flex-shrink-0"
+                className="rounded-[var(--border-radius-md)] overflow-hidden flex-shrink-0 flex items-center justify-center"
                 style={{
                   background: `linear-gradient(135deg, ${getRarityColor(
                     selectedItem.rarity
                   )}30, ${getRarityColor(selectedItem.rarity)}10)`,
                 }}
               >
-                <ItemMediaPreview item={selectedItem} size="small" />
+                <ItemMediaPreview
+                  item={selectedItem}
+                  size="small"
+                  userProfileImage={userProfileImage}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-[var(--color-text)] truncate">
