@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useProfile } from "../../contexts/UserContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Store,
@@ -1688,8 +1689,9 @@ const DashboardStore = () => {
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
 
-  // ✅ Foto do usuário logado (substituir pela real do contexto de auth)
-  const userProfileImage = PREVIEW_PROFILE_IMAGE;
+  const { profileData, isLoadingProfile } = useProfile();
+
+
 
   // Carregar itens da loja
   const loadStoreItems = useCallback(async () => {
@@ -2071,7 +2073,7 @@ const DashboardStore = () => {
                   key={item.id}
                   item={item}
                   userCoins={userCoins}
-                  userProfileImage={userProfileImage}
+                  userProfileImage={profileData?.profileImageUrl ?? "Usuário"}
                   onPreview={() => handlePreview(item)}
                   onPurchase={() => handlePurchaseClick(item)}
                   onEquip={() => handleEquip(item)}
@@ -2110,7 +2112,7 @@ const DashboardStore = () => {
                 item={selectedItem}
                 size="large"
                 showPlayButton={selectedItem.type === "effect"}
-                userProfileImage={userProfileImage}
+                userProfileImage={profileData?.profileImageUrl ?? "Usuário"}
               />
 
               {/* Badges */}
@@ -2310,7 +2312,7 @@ const DashboardStore = () => {
                 <ItemMediaPreview
                   item={selectedItem}
                   size="small"
-                  userProfileImage={userProfileImage}
+                  userProfileImage={profileData?.profileImageUrl ?? "Usuário"}
                 />
               </div>
               <div className="flex-1 min-w-0">

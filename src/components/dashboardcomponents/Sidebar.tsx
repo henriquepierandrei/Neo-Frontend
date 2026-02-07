@@ -5,7 +5,7 @@ import { useTheme } from "../../hooks/ThemeProvider";
 import { useAuth } from "../../hooks/useAuth";
 import { VxoLogo } from "../LogoProps";
 import { VxoLogoSmall } from "../LogoPropsSmall";
-import api from "../../services/api";
+import { useProfile } from "../../contexts/UserContext";
 
 import {
   Home,
@@ -65,6 +65,7 @@ const Sidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("Início");
   const { isDark, toggleTheme } = useTheme();
+  
 
   // Auth hooks e estados para logout
   const { user, logout, isLoading } = useAuth();
@@ -72,34 +73,15 @@ const Sidebar = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Estados para dados do perfil
-  const [profileData, setProfileData] = useState<SimpleProfileResponse | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [profileImageError, setProfileImageError] = useState(false);
+   const { profileData, isLoadingProfile } = useProfile();
 
-  // Buscar dados do perfil
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setIsLoadingProfile(true);
-        const response = await api.get<SimpleProfileResponse>("/user/profile");
-        
-        // ✅ Log para debug - remova depois
-        console.log("Profile data received:", response.data);
-        
-        setProfileData(response.data);
-        setProfileImageError(false);
-      } catch (error) {
-        console.error("Erro ao carregar perfil:", error);
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    };
-
-    // Só busca se o usuário estiver autenticado
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
+  if (isLoadingProfile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   // Função de Logout
   const handleLogout = async () => {
@@ -115,31 +97,12 @@ const Sidebar = () => {
     }
   };
 
-  // Gera iniciais do usuário
-  const getUserInitials = (name?: string, email?: string): string => {
-    if (name) {
-      const parts = name.split(" ");
-      if (parts.length >= 2) {
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      }
-      return name.slice(0, 2).toUpperCase();
-    }
-    if (email) {
-      return email.slice(0, 2).toUpperCase();
-    }
-    return "US";
-  };
+  
 
-  // ✅ CORRIGIDO: Usar dados do profileData primeiro, depois fallback para user context
   const displayName = profileData?.name || user?.name || "Usuário";
   const profileUrl = profileData?.url || user?.urlName || "usuario";
-  const profileImageUrl = profileData?.profileImageUrl;
+  const profileImageUrl = profileData?.profileImageUrl ?? "Usuário";
 
-  // Handler para erro de imagem
-  const handleImageError = () => {
-    console.log("Image failed to load:", profileImageUrl);
-    setProfileImageError(true);
-  };
 
   const navSections: NavSection[] = [
     {
@@ -229,25 +192,9 @@ const Sidebar = () => {
       );
     }
 
-    // ✅ CORRIGIDO: Verificar se a URL é válida (não é uma URL de busca do Google)
-    const isValidImageUrl = profileImageUrl && 
-      !profileImageUrl.includes('google.com/imgres') && 
-      !profileImageError;
+    
 
-    // Se tem imagem válida e não deu erro, mostra a imagem
-    if (isValidImageUrl) {
-      return (
-        <div className="relative">
-          <img
-            src={profileImageUrl}
-            alt={displayName}
-            className={`${sizeClasses} rounded-full object-cover border-2 border-[var(--color-primary)]/30`}
-            onError={handleImageError}
-          />
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
-        </div>
-      );
-    }
+
 
     // Fallback: mostra iniciais
     return (
@@ -257,7 +204,7 @@ const Sidebar = () => {
         >
           <span className={`text-white font-semibold ${textSize}`}>
             {/* ✅ CORRIGIDO: Usar displayName (que vem do profileData primeiro) */}
-            {getUserInitials(displayName, user?.email)}
+            <img src={profileImageUrl} alt={displayName} className="w-full h-full rounded-full object-cover" />
           </span>
         </div>
         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--color-background)]" />
