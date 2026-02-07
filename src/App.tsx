@@ -22,6 +22,7 @@ import DashboardStart from "./pages/dashboardpages/DashboardStart";
 
 import TitleManager from "./types/TitleManager";
 import { AuthProvider } from "./contexts/AuthContext";
+import DashboardStore from "./pages/dashboardpages/DashboardStore";
 
 function App() {
   return (
@@ -114,6 +115,17 @@ function App() {
                     <ProtectedRoute>
                       <DashboardLayout>
                         <DashboardSocial />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/store"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardStore />
                       </DashboardLayout>
                     </ProtectedRoute>
                   }

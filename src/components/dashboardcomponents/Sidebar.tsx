@@ -94,10 +94,10 @@ const Sidebar = () => {
         {
           icon: <ShoppingBag size={20} />,
           label: "Loja",
-          href: "/loja",
+          href: "/dashboard/store",
           badge: "Novo",
-          isBlock: true,
-          blockReason: "Em breve"
+          isBlock: false,
+          blockReason: "Novo"
         },
       ],
     },

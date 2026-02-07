@@ -1,5 +1,5 @@
 // pages/Customization/Customization.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette,
@@ -26,13 +26,18 @@ import {
   Atom,
   AlignCenter,
   Upload,
-  Link as LinkIcon,
   X,
   Monitor,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
+import { customizationService } from "../../services/customizationService";
+import type { 
+  UserPageFrontendResponse,
+} from "../../types/customization.types";
 
 // ═══════════════════════════════════════════════════════════
-// TIPOS
+// TIPOS INTERNOS
 // ═══════════════════════════════════════════════════════════
 
 interface CustomizationSettings {
@@ -68,10 +73,92 @@ interface CustomizationSettings {
 }
 
 // ═══════════════════════════════════════════════════════════
-// COMPONENTES BASE
+// TRANSFORMAÇÃO DE DADOS
 // ═══════════════════════════════════════════════════════════
 
-// Toggle Switch Component
+/**
+ * Converte response da API para estado local
+ */
+const responseToSettings = (response: UserPageFrontendResponse): CustomizationSettings => ({
+  // Card
+  cardOpacity: response.cardSettings.opacity,
+  cardBlur: response.cardSettings.blur,
+  cardColor: response.cardSettings.color,
+  cardPerspective: response.cardSettings.perspective,
+  cardHoverGrow: response.cardSettings.hoverGrow,
+  rgbBorder: response.cardSettings.rgbBorder,
+  
+  // Content
+  biography: response.contentSettings.biography,
+  contentCenter: response.contentSettings.centerAlign,
+  biographyColor: response.contentSettings.biographyColor,
+  
+  // Name
+  name: response.nameEffects.name,
+  neonName: response.nameEffects.neon,
+  shinyName: response.nameEffects.shiny,
+  rgbName: response.nameEffects.rgb,
+  
+  // Media
+  backgroundUrl: response.mediaUrls.backgroundUrl,
+  profileImageUrl: response.mediaUrls.profileImageUrl,
+  musicUrl: response.mediaUrls.musicUrl,
+  cursorUrl: response.mediaUrls.cursorUrl,
+  
+  // Effects
+  snowEffect: response.pageEffects.snow,
+  confettiEffect: response.pageEffects.confetti,
+  matrixRainEffect: response.pageEffects.matrixRain,
+  particlesEffect: response.pageEffects.particles.enabled,
+  particlesColor: response.pageEffects.particles.color,
+});
+
+/**
+ * Converte estado local para request da API
+ */
+const settingsToRequest = (settings: CustomizationSettings) => ({
+  cardSettings: {
+    opacity: settings.cardOpacity,
+    blur: settings.cardBlur,
+    color: settings.cardColor,
+    perspective: settings.cardPerspective,
+    hoverGrow: settings.cardHoverGrow,
+    rgbBorder: settings.rgbBorder,
+  },
+  contentSettings: {
+    biography: settings.biography,
+    biographyColor: settings.biographyColor,
+    centerAlign: settings.contentCenter,
+  },
+  nameEffects: {
+    name: settings.name,
+    neon: settings.neonName,
+    shiny: settings.shinyName,
+    rgb: settings.rgbName,
+  },
+  mediaUrls: {
+    backgroundUrl: settings.backgroundUrl,
+    profileImageUrl: settings.profileImageUrl,
+    musicUrl: settings.musicUrl,
+    cursorUrl: settings.cursorUrl,
+  },
+  pageEffects: {
+    snow: settings.snowEffect,
+    confetti: settings.confettiEffect,
+    matrixRain: settings.matrixRainEffect,
+    particles: {
+      enabled: settings.particlesEffect,
+      color: settings.particlesColor,
+    },
+  },
+});
+
+// ═══════════════════════════════════════════════════════════
+// COMPONENTES BASE (seus componentes existentes)
+// ═════════════════════════════════════════════════════════════
+
+// ... (mantenha todos os componentes: ToggleSwitch, Slider, ColorPicker, etc.)
+
 const ToggleSwitch = ({
   label,
   description,
@@ -130,7 +217,6 @@ const ToggleSwitch = ({
   </motion.div>
 );
 
-// Slider Component
 const Slider = ({
   label,
   value,
@@ -180,12 +266,6 @@ const Slider = ({
           [&::-webkit-slider-thumb]:transition-transform
           [&::-webkit-slider-thumb]:hover:scale-110
           [&::-webkit-slider-thumb]:shadow-lg
-          [&::-moz-range-thumb]:w-5
-          [&::-moz-range-thumb]:h-5
-          [&::-moz-range-thumb]:rounded-full
-          [&::-moz-range-thumb]:bg-[var(--color-primary)]
-          [&::-moz-range-thumb]:cursor-pointer
-          [&::-moz-range-thumb]:border-0
         "
         style={{
           background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${((value - min) / (max - min)) * 100}%, var(--color-border) ${((value - min) / (max - min)) * 100}%, var(--color-border) 100%)`
@@ -195,7 +275,6 @@ const Slider = ({
   </div>
 );
 
-// Color Picker Component
 const ColorPicker = ({
   label,
   value,
@@ -257,7 +336,6 @@ const ColorPicker = ({
         </div>
       </div>
       
-      {/* Preset Colors */}
       <div className="flex flex-wrap gap-2">
         {colors.map((color) => (
           <motion.button
@@ -280,7 +358,6 @@ const ColorPicker = ({
   );
 };
 
-// Input Component
 const Input = ({
   label,
   type = "text",
@@ -291,6 +368,8 @@ const Input = ({
   error,
   maxLength,
   helperText,
+  className,
+  disabled = false,
 }: {
   label: string;
   type?: string;
@@ -301,6 +380,8 @@ const Input = ({
   error?: string;
   maxLength?: number;
   helperText?: string;
+  className?: string;
+  disabled?: boolean;
 }) => (
   <div className="space-y-2">
     <div className="flex items-center justify-between">
@@ -323,6 +404,7 @@ const Input = ({
         value={value}
         onChange={(e) => onChange(maxLength ? e.target.value.slice(0, maxLength) : e.target.value)}
         maxLength={maxLength}
+        disabled={disabled}
         className={`
           w-full px-4 py-3 rounded-[var(--border-radius-md)]
           bg-[var(--color-surface)] border transition-all duration-300
@@ -333,6 +415,8 @@ const Input = ({
             ? "border-red-500/50 focus:border-red-500"
             : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
           }
+          ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+          ${className || ""}
         `}
       />
     </div>
@@ -348,7 +432,6 @@ const Input = ({
   </div>
 );
 
-// Textarea Component
 const Textarea = ({
   label,
   placeholder,
@@ -396,7 +479,6 @@ const Textarea = ({
   </div>
 );
 
-// Card Component
 const CustomizationCard = ({
   children,
   className = "",
@@ -417,7 +499,6 @@ const CustomizationCard = ({
   </motion.div>
 );
 
-// Section Header
 const SectionHeader = ({
   icon: Icon,
   title,
@@ -438,7 +519,6 @@ const SectionHeader = ({
   </div>
 );
 
-// URL Input with Preview
 const UrlInput = ({
   label,
   value,
@@ -532,7 +612,6 @@ const UrlInput = ({
   );
 };
 
-// Live Preview Component
 const LivePreview = ({
   settings,
   isOpen,
@@ -558,7 +637,6 @@ const LivePreview = ({
           exit={{ opacity: 0, scale: 0.9 }}
           className="fixed inset-4 sm:inset-8 z-50 rounded-[var(--border-radius-xl)] overflow-hidden border border-[var(--color-border)]"
         >
-          {/* Preview Header */}
           <div className="
             absolute top-0 left-0 right-0 z-10
             flex items-center justify-between
@@ -579,7 +657,6 @@ const LivePreview = ({
             </motion.button>
           </div>
           
-          {/* Preview Content */}
           <div
             className="w-full h-full pt-14 overflow-auto"
             style={{
@@ -589,15 +666,12 @@ const LivePreview = ({
               backgroundColor: settings.backgroundUrl ? undefined : 'var(--color-background)',
             }}
           >
-            {/* Effects Overlay */}
             {settings.snowEffect && (
               <div className="absolute inset-0 pointer-events-none">
-                {/* Snow effect placeholder */}
                 <div className="text-white/20 text-center pt-20">❄️ Efeito Neve Ativo</div>
               </div>
             )}
             
-            {/* Profile Card Preview */}
             <div className="flex items-center justify-center min-h-full p-8">
               <motion.div
                 className={`
@@ -610,16 +684,10 @@ const LivePreview = ({
                     : `rgba(0, 0, 0, ${settings.cardOpacity / 100})`,
                   backdropFilter: `blur(${settings.cardBlur}px)`,
                   border: settings.rgbBorder ? '2px solid transparent' : '1px solid rgba(255,255,255,0.1)',
-                  backgroundImage: settings.rgbBorder 
-                    ? 'linear-gradient(var(--color-background), var(--color-background)), linear-gradient(90deg, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff0080, #ff0000)'
-                    : undefined,
-                  backgroundOrigin: settings.rgbBorder ? 'padding-box, border-box' : undefined,
-                  backgroundClip: settings.rgbBorder ? 'padding-box, border-box' : undefined,
                   transform: settings.cardPerspective ? 'perspective(1000px) rotateY(-5deg)' : undefined,
                 }}
                 whileHover={settings.cardHoverGrow ? { scale: 1.05 } : {}}
               >
-                {/* Profile Image */}
                 <div className={`${settings.contentCenter ? 'flex justify-center' : ''} mb-4`}>
                   <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-white/20">
                     {settings.profileImageUrl ? (
@@ -634,7 +702,6 @@ const LivePreview = ({
                   </div>
                 </div>
                 
-                {/* Name */}
                 <h2
                   className={`
                     text-2xl font-bold mb-2
@@ -649,7 +716,6 @@ const LivePreview = ({
                   {settings.name || "Seu Nome"}
                 </h2>
                 
-                {/* Biography */}
                 <p
                   className="text-sm opacity-80"
                   style={{ color: settings.biographyColor || 'rgba(255,255,255,0.7)' }}
@@ -666,11 +732,11 @@ const LivePreview = ({
 );
 
 // ═══════════════════════════════════════════════════════════
-// PÁGINA PRINCIPAL
+// PÁGINA PRINCIPAL COM INTEGRAÇÃO
 // ═══════════════════════════════════════════════════════════
 
 const DashboardCustomization = () => {
-  // Estado inicial
+  // Estado inicial vazio
   const defaultSettings: CustomizationSettings = {
     cardOpacity: 80,
     cardBlur: 10,
@@ -698,10 +764,51 @@ const DashboardCustomization = () => {
 
   const [settings, setSettings] = useState<CustomizationSettings>(defaultSettings);
   const [originalSettings, setOriginalSettings] = useState<CustomizationSettings>(defaultSettings);
+  const [isPremium, setIsPremium] = useState(false);
+  
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // ═══════════════════════════════════════════════════════════
+  // CARREGAR CONFIGURAÇÕES
+  // ═══════════════════════════════════════════════════════════
+
+  const loadSettings = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await customizationService.getUserPageSettings();
+      
+      const loadedSettings = responseToSettings(response);
+      setSettings(loadedSettings);
+      setOriginalSettings(loadedSettings);
+      setIsPremium(response.isPremium);
+      
+    } catch (err: any) {
+      console.error("Erro ao carregar configurações:", err);
+      
+      if (err.response?.status === 401) {
+        setError("Sessão expirada. Faça login novamente.");
+      } else if (err.response?.status === 404) {
+        // Usuário ainda não tem configurações, usar padrão
+        setSettings(defaultSettings);
+        setOriginalSettings(defaultSettings);
+      } else {
+        setError("Erro ao carregar configurações. Tente novamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   // Detectar mudanças
   useEffect(() => {
@@ -709,7 +816,10 @@ const DashboardCustomization = () => {
     setHasChanges(changed);
   }, [settings, originalSettings]);
 
-  // Update handler genérico
+  // ═══════════════════════════════════════════════════════════
+  // HANDLERS
+  // ═══════════════════════════════════════════════════════════
+
   const updateSetting = <K extends keyof CustomizationSettings>(
     key: K,
     value: CustomizationSettings[K]
@@ -717,28 +827,76 @@ const DashboardCustomization = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  // Handler para salvar
   const handleSave = async () => {
     setIsSubmitting(true);
+    setError(null);
     
-    // Simular API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setOriginalSettings(settings);
-    setIsSubmitting(false);
-    setSuccessMessage("Configurações salvas com sucesso!");
-    
-    setTimeout(() => {
-      setSuccessMessage("");
-    }, 3000);
+    try {
+      const requestData = settingsToRequest(settings);
+      const response = await customizationService.updatePageSettings(requestData);
+      
+      const updatedSettings = responseToSettings(response);
+      setSettings(updatedSettings);
+      setOriginalSettings(updatedSettings);
+      
+      setSuccessMessage("Configurações salvas com sucesso!");
+      
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
+      
+    } catch (err: any) {
+      console.error("Erro ao salvar configurações:", err);
+      
+      if (err.response?.status === 403) {
+        setError(err.response.data?.message || "Você não tem permissão para usar recursos premium.");
+      } else if (err.response?.status === 401) {
+        setError("Sessão expirada. Faça login novamente.");
+      } else {
+        setError(err.response?.data?.message || "Erro ao salvar configurações. Tente novamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Handler para resetar
   const handleReset = () => {
     setSettings(originalSettings);
+    setError(null);
   };
 
-  // Animações
+  const handleResetToDefault = async () => {
+    if (!confirm("Tem certeza que deseja resetar todas as configurações para o padrão?")) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await customizationService.resetPageSettings();
+      
+      setSettings(defaultSettings);
+      setOriginalSettings(defaultSettings);
+      
+      setSuccessMessage("Configurações resetadas para o padrão!");
+      
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
+      
+    } catch (err: any) {
+      console.error("Erro ao resetar configurações:", err);
+      setError(err.response?.data?.message || "Erro ao resetar configurações. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -753,6 +911,18 @@ const DashboardCustomization = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 size={48} className="mx-auto mb-4 animate-spin text-[var(--color-primary)]" />
+          <p className="text-[var(--color-text-muted)]">Carregando configurações...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] pb-8">
@@ -774,10 +944,17 @@ const DashboardCustomization = () => {
           transition={{ delay: 0.1 }}
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-text)] flex items-center gap-2 sm:gap-3">
-            <Palette className="text-[var(--color-primary)] w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
-            Personalize seu perfil do seu jeito.
-          </h1>
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-text)] flex items-center gap-2 sm:gap-3">
+              <Palette className="text-[var(--color-primary)] w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
+              Personalize seu perfil do seu jeito.
+            </h1>
+            {!isPremium && (
+              <p className="text-xs sm:text-sm text-amber-400 mt-1">
+                ⭐ Alguns recursos são exclusivos para usuários premium
+              </p>
+            )}
+          </div>
           
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
@@ -796,6 +973,22 @@ const DashboardCustomization = () => {
             >
               <Eye size={18} />
               <span className="hidden sm:inline">Preview</span>
+            </motion.button>
+            
+            <motion.button
+              onClick={loadSettings}
+              disabled={isLoading}
+              className="
+                p-2.5 rounded-[var(--border-radius-md)]
+                bg-[var(--color-surface)] border border-[var(--color-border)]
+                text-[var(--color-text-muted)] hover:text-[var(--color-text)]
+                transition-all duration-300
+              "
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="Recarregar configurações"
+            >
+              <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
             </motion.button>
             
             {hasChanges && (
@@ -821,6 +1014,27 @@ const DashboardCustomization = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Error Message */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-6 p-4 rounded-[var(--border-radius-md)] bg-red-500/10 border border-red-500/30 flex items-center gap-3"
+          >
+            <AlertCircle size={20} className="text-red-400 flex-shrink-0" />
+            <span className="text-sm text-red-400 flex-1">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="p-1 rounded-full hover:bg-red-500/20 text-red-400"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Success Message */}
       <AnimatePresence>
@@ -890,26 +1104,29 @@ const DashboardCustomization = () => {
               <div className="space-y-3 pt-2">
                 <ToggleSwitch
                   label="Perspectiva 3D"
-                  description="Adiciona efeito de profundidade ao card"
+                  description={!isPremium ? "⭐ Recurso Premium" : "Adiciona efeito de profundidade ao card"}
                   checked={settings.cardPerspective}
                   onChange={(value) => updateSetting("cardPerspective", value)}
                   icon={Move}
+                  disabled={!isPremium}
                 />
 
                 <ToggleSwitch
                   label="Crescer ao Hover"
-                  description="Card aumenta quando passa o mouse"
+                  description={!isPremium ? "⭐ Recurso Premium" : "Card aumenta quando passa o mouse"}
                   checked={settings.cardHoverGrow}
                   onChange={(value) => updateSetting("cardHoverGrow", value)}
                   icon={Zap}
+                  disabled={!isPremium}
                 />
 
                 <ToggleSwitch
                   label="Borda RGB"
-                  description="Borda animada com cores do arco-íris"
+                  description={!isPremium ? "⭐ Recurso Premium" : "Borda animada com cores do arco-íris"}
                   checked={settings.rgbBorder}
                   onChange={(value) => updateSetting("rgbBorder", value)}
                   icon={Sparkles}
+                  disabled={!isPremium}
                 />
               </div>
             </div>
@@ -936,12 +1153,13 @@ const DashboardCustomization = () => {
                 icon={Type}
                 maxLength={30}
                 helperText="Nome exibido em seu perfil"
+                disabled={true}
               />
 
               <div className="space-y-3">
                 <ToggleSwitch
                   label="Efeito Neon"
-                  description="Adiciona brilho neon ao nome"
+                  description={!isPremium ? "⭐ Recurso Premium" : "Adiciona brilho neon ao nome"}
                   checked={settings.neonName}
                   onChange={(value) => {
                     updateSetting("neonName", value);
@@ -951,11 +1169,12 @@ const DashboardCustomization = () => {
                     }
                   }}
                   icon={Zap}
+                  disabled={!isPremium}
                 />
 
                 <ToggleSwitch
                   label="Efeito Brilhante"
-                  description="Nome com gradiente dourado"
+                  description={!isPremium ? "⭐ Recurso Premium" : "Nome com gradiente dourado"}
                   checked={settings.shinyName}
                   onChange={(value) => {
                     updateSetting("shinyName", value);
@@ -965,11 +1184,12 @@ const DashboardCustomization = () => {
                     }
                   }}
                   icon={Sparkles}
+                  disabled={!isPremium}
                 />
 
                 <ToggleSwitch
                   label="Nome RGB"
-                  description="Animação de cores no nome"
+                  description={!isPremium ? "⭐ Recurso Premium" : "Animação de cores no nome"}
                   checked={settings.rgbName}
                   onChange={(value) => {
                     updateSetting("rgbName", value);
@@ -979,6 +1199,7 @@ const DashboardCustomization = () => {
                     }
                   }}
                   icon={Palette}
+                  disabled={!isPremium}
                 />
               </div>
 
@@ -1043,7 +1264,7 @@ const DashboardCustomization = () => {
               />
 
               <Input
-                label="Música de Fundo"
+                label={`Música de Fundo ${!isPremium ? "⭐ Premium" : ""}`}
                 type="url"
                 placeholder="https://exemplo.com/musica.mp3"
                 value={settings.musicUrl}
@@ -1053,7 +1274,7 @@ const DashboardCustomization = () => {
               />
 
               <Input
-                label="Cursor Personalizado"
+                label={`Cursor Personalizado ${!isPremium ? "⭐ Premium" : ""}`}
                 type="url"
                 placeholder="https://exemplo.com/cursor.png"
                 value={settings.cursorUrl}
@@ -1079,38 +1300,42 @@ const DashboardCustomization = () => {
             <div className="space-y-4">
               <ToggleSwitch
                 label="Efeito Neve"
-                description="Flocos de neve caindo"
+                description={!isPremium ? "⭐ Recurso Premium - Flocos de neve caindo" : "Flocos de neve caindo"}
                 checked={settings.snowEffect}
                 onChange={(value) => updateSetting("snowEffect", value)}
                 icon={Snowflake}
+                disabled={!isPremium}
               />
 
               <ToggleSwitch
                 label="Efeito Confete"
-                description="Confetes coloridos"
+                description={!isPremium ? "⭐ Recurso Premium - Confetes coloridos" : "Confetes coloridos"}
                 checked={settings.confettiEffect}
                 onChange={(value) => updateSetting("confettiEffect", value)}
                 icon={PartyPopper}
+                disabled={!isPremium}
               />
 
               <ToggleSwitch
                 label="Matrix Rain"
-                description="Chuva de caracteres estilo Matrix"
+                description={!isPremium ? "⭐ Recurso Premium - Chuva de caracteres estilo Matrix" : "Chuva de caracteres estilo Matrix"}
                 checked={settings.matrixRainEffect}
                 onChange={(value) => updateSetting("matrixRainEffect", value)}
                 icon={Binary}
+                disabled={!isPremium}
               />
 
               <ToggleSwitch
                 label="Partículas"
-                description="Partículas flutuantes interativas"
+                description={!isPremium ? "⭐ Recurso Premium - Partículas flutuantes interativas" : "Partículas flutuantes interativas"}
                 checked={settings.particlesEffect}
                 onChange={(value) => updateSetting("particlesEffect", value)}
                 icon={Atom}
+                disabled={!isPremium}
               />
 
               <AnimatePresence>
-                {settings.particlesEffect && (
+                {settings.particlesEffect && isPremium && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
@@ -1182,11 +1407,7 @@ const DashboardCustomization = () => {
             >
               {isSubmitting ? (
                 <>
-                  <motion.div
-                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  />
+                  <Loader2 size={18} className="animate-spin" />
                   Salvando...
                 </>
               ) : (

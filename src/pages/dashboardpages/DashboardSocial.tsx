@@ -22,12 +22,10 @@ import { linkService } from "../../services/linkService";
 import { 
   detectSocialNetwork, 
   isSocialNetworkUrl,
-  getSocialNetworkName 
 } from "../../utils/socialUtils";
 import { 
   isValidUrl, 
   normalizeUrl, 
-  extractDomainInfo 
 } from "../../utils/linkUtils";
 import type { UserLinkResponse } from "../../types/links.types";
 

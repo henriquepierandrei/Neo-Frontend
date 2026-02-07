@@ -1,5 +1,5 @@
 // pages/Assets/Assets.tsx
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FolderOpen,
@@ -24,20 +24,21 @@ import {
   Maximize2,
   Copy,
   Check,
+  Loader2,
+  RefreshCw,
+  Link as LinkIcon,
 } from "lucide-react";
+import { customizationService } from "../../services/customizationService";
+import type { UserPageFrontendResponse } from "../../types/customization.types";
 
 // ═══════════════════════════════════════════════════════════
 // TIPOS
 // ═══════════════════════════════════════════════════════════
 
 interface MediaAsset {
-  id: string;
   type: "avatar" | "background" | "cursor" | "audio";
   url: string;
-  filename: string;
-  size: string;
-  uploadedAt: string;
-  mimeType: string;
+  isActive: boolean;
 }
 
 interface ActiveAssets {
@@ -49,10 +50,45 @@ interface ActiveAssets {
 }
 
 // ═══════════════════════════════════════════════════════════
-// COMPONENTES BASE
+// UTILITÁRIOS
 // ═══════════════════════════════════════════════════════════
 
-// Card Component
+const getFileNameFromUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const filename = pathname.substring(pathname.lastIndexOf('/') + 1);
+    return decodeURIComponent(filename) || 'arquivo';
+  } catch {
+    return 'arquivo';
+  }
+};
+
+const getMimeTypeFromUrl = (url: string): string => {
+  const ext = url.split('.').pop()?.toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    cur: 'image/x-icon',
+    svg: 'image/svg+xml',
+  };
+  return mimeTypes[ext || ''] || 'application/octet-stream';
+};
+
+const formatDate = (date: Date): string => {
+  return new Intl.DateTimeFormat('pt-BR').format(date);
+};
+
+// ═══════════════════════════════════════════════════════════
+// COMPONENTES BASE (Reutilizados)
+// ═══════════════════════════════════════════════════════════
+
 const AssetsCard = ({
   children,
   className = "",
@@ -73,7 +109,6 @@ const AssetsCard = ({
   </motion.div>
 );
 
-// Section Header
 const SectionHeader = ({
   icon: Icon,
   title,
@@ -99,7 +134,6 @@ const SectionHeader = ({
   </div>
 );
 
-// Status Badge
 const StatusBadge = ({ active }: { active: boolean }) => (
   <span
     className={`
@@ -116,7 +150,6 @@ const StatusBadge = ({ active }: { active: boolean }) => (
   </span>
 );
 
-// Info Item
 const InfoItem = ({
   icon: Icon,
   label,
@@ -133,7 +166,6 @@ const InfoItem = ({
   </div>
 );
 
-// Empty State
 const EmptyAssetState = ({
   icon: Icon,
   title,
@@ -153,10 +185,22 @@ const EmptyAssetState = ({
     </div>
     <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">{title}</h3>
     <p className="text-xs text-[var(--color-text-muted)] max-w-xs">{description}</p>
+    <motion.button
+      onClick={() => window.location.href = "/dashboard/customization"}
+      className="
+        mt-4 px-4 py-2 rounded-[var(--border-radius-md)]
+        bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20
+        text-[var(--color-primary)] text-sm font-medium
+        transition-all duration-300
+      "
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      Ir para Customização
+    </motion.button>
   </motion.div>
 );
 
-// Modal Component
 const Modal = ({
   isOpen,
   onClose,
@@ -223,7 +267,6 @@ const Modal = ({
   );
 };
 
-// Audio Player Component
 const AudioPlayer = ({
   url,
   volume,
@@ -300,7 +343,6 @@ const AudioPlayer = ({
         loop
       />
 
-      {/* Progress Bar */}
       <div className="space-y-2">
         <input
           type="range"
@@ -328,7 +370,6 @@ const AudioPlayer = ({
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex items-center gap-4">
         <motion.button
           onClick={togglePlay}
@@ -343,7 +384,6 @@ const AudioPlayer = ({
           {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
         </motion.button>
 
-        {/* Volume Control */}
         <div className="flex items-center gap-2 flex-1">
           <motion.button
             onClick={toggleMute}
@@ -379,7 +419,6 @@ const AudioPlayer = ({
   );
 };
 
-// Asset Preview Card Component
 const AssetPreviewCard = ({
   asset,
   icon: Icon,
@@ -387,14 +426,15 @@ const AssetPreviewCard = ({
   onRemove,
   onView,
   children,
+  disabled,
 }: {
   asset: MediaAsset | null;
-  type: string;
   icon: React.ElementType;
   title: string;
   onRemove: () => void;
   onView: () => void;
   children?: React.ReactNode;
+  disabled: boolean;
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -412,7 +452,6 @@ const AssetPreviewCard = ({
       bg-[var(--color-surface)] border border-[var(--color-border)]
       hover:border-[var(--color-primary)]/30 transition-all duration-300
     ">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-[var(--border-radius-sm)] bg-[var(--color-primary)]/10">
@@ -422,7 +461,7 @@ const AssetPreviewCard = ({
             <h3 className="text-sm font-medium text-[var(--color-text)]">{title}</h3>
             {asset && (
               <p className="text-xs text-[var(--color-text-muted)] truncate max-w-[150px]">
-                {asset.filename}
+                {getFileNameFromUrl(asset.url)}
               </p>
             )}
           </div>
@@ -432,17 +471,14 @@ const AssetPreviewCard = ({
 
       {asset ? (
         <>
-          {/* Preview Content */}
           {children}
 
-          {/* Asset Info */}
           <div className="mt-4 space-y-2 p-3 rounded-[var(--border-radius-sm)] bg-[var(--color-background)]">
-            <InfoItem icon={HardDrive} label="Tamanho" value={asset.size} />
-            <InfoItem icon={Calendar} label="Enviado em" value={asset.uploadedAt} />
-            <InfoItem icon={FileVideo} label="Tipo" value={asset.mimeType} />
+            <InfoItem icon={LinkIcon} label="URL" value={asset.url.substring(0, 40) + '...'} />
+            <InfoItem icon={FileVideo} label="Tipo" value={getMimeTypeFromUrl(asset.url)} />
+            <InfoItem icon={Calendar} label="Configurado em" value={formatDate(new Date())} />
           </div>
 
-          {/* Actions */}
           <div className="mt-4 flex items-center gap-2">
             <motion.button
               onClick={onView}
@@ -462,11 +498,12 @@ const AssetPreviewCard = ({
 
             <motion.button
               onClick={handleCopy}
+              disabled={disabled}
               className="
                 p-2 rounded-[var(--border-radius-sm)]
                 bg-[var(--color-background)] hover:bg-[var(--color-surface-hover)]
                 text-[var(--color-text-muted)] hover:text-[var(--color-text)]
-                transition-all duration-300
+                transition-all duration-300 disabled:opacity-50
               "
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -494,11 +531,12 @@ const AssetPreviewCard = ({
 
             <motion.button
               onClick={onRemove}
+              disabled={disabled}
               className="
                 p-2 rounded-[var(--border-radius-sm)]
                 bg-[var(--color-background)] hover:bg-red-500/10
                 text-[var(--color-text-muted)] hover:text-red-400
-                transition-all duration-300
+                transition-all duration-300 disabled:opacity-50
               "
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -512,7 +550,7 @@ const AssetPreviewCard = ({
         <EmptyAssetState
           icon={Icon}
           title={`Nenhum ${title.toLowerCase()} ativo`}
-          description={`Você ainda não enviou um ${title.toLowerCase()} para seu perfil.`}
+          description={`Configure um ${title.toLowerCase()} na página de Customização.`}
         />
       )}
     </div>
@@ -520,47 +558,23 @@ const AssetPreviewCard = ({
 };
 
 // ═══════════════════════════════════════════════════════════
-// PÁGINA PRINCIPAL
+// PÁGINA PRINCIPAL COM INTEGRAÇÃO
 // ═══════════════════════════════════════════════════════════
 
 const DashboardAssets = () => {
-  // Mock data - substituir por dados da API
   const [assets, setAssets] = useState<ActiveAssets>({
-    avatar: {
-      id: "1",
-      type: "avatar",
-      url: "https://i.pravatar.cc/300",
-      filename: "meu-avatar.png",
-      size: "245 KB",
-      uploadedAt: "15/01/2024",
-      mimeType: "image/png",
-    },
-    background: {
-      id: "2",
-      type: "background",
-      url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1920",
-      filename: "background-gradient.jpg",
-      size: "1.2 MB",
-      uploadedAt: "14/01/2024",
-      mimeType: "image/jpeg",
-    },
+    avatar: null,
+    background: null,
     cursor: null,
-    audio: {
-      id: "4",
-      type: "audio",
-      url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-      filename: "musica-de-fundo.mp3",
-      size: "3.5 MB",
-      uploadedAt: "10/01/2024",
-      mimeType: "audio/mpeg",
-    },
+    audio: null,
     audioVolume: 50,
   });
 
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Modals
   const [viewModal, setViewModal] = useState<{
     isOpen: boolean;
     type: "avatar" | "background" | "cursor" | "audio" | null;
@@ -571,21 +585,110 @@ const DashboardAssets = () => {
     type: "avatar" | "background" | "cursor" | "audio" | null;
   }>({ isOpen: false, type: null });
 
-  // Handlers
+  // ═══════════════════════════════════════════════════════════
+  // CARREGAR ASSETS DA API
+  // ═══════════════════════════════════════════════════════════
+
+  const loadAssets = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await customizationService.getUserPageSettings();
+
+      // Transformar mediaUrls em assets
+      const mediaUrls = response.mediaUrls;
+
+      setAssets({
+        avatar: mediaUrls.profileImageUrl
+          ? { type: "avatar", url: mediaUrls.profileImageUrl, isActive: true }
+          : null,
+        background: mediaUrls.backgroundUrl
+          ? { type: "background", url: mediaUrls.backgroundUrl, isActive: true }
+          : null,
+        cursor: mediaUrls.cursorUrl
+          ? { type: "cursor", url: mediaUrls.cursorUrl, isActive: true }
+          : null,
+        audio: mediaUrls.musicUrl
+          ? { type: "audio", url: mediaUrls.musicUrl, isActive: true }
+          : null,
+        audioVolume: 50, // Volume padrão
+      });
+    } catch (err: any) {
+      console.error("Erro ao carregar assets:", err);
+
+      if (err.response?.status === 401) {
+        setError("Sessão expirada. Faça login novamente.");
+      } else if (err.response?.status === 404) {
+        // Usuário não tem configurações ainda
+        setAssets({
+          avatar: null,
+          background: null,
+          cursor: null,
+          audio: null,
+          audioVolume: 50,
+        });
+      } else {
+        setError("Erro ao carregar assets. Tente novamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAssets();
+  }, [loadAssets]);
+
+  // ═══════════════════════════════════════════════════════════
+  // HANDLERS
+  // ═══════════════════════════════════════════════════════════
+
   const handleRemove = async (type: "avatar" | "background" | "cursor" | "audio") => {
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    setAssets(prev => ({ ...prev, [type]: null }));
-    setDeleteModal({ isOpen: false, type: null });
-    setIsSubmitting(false);
-    setSuccessMessage(`${getAssetTitle(type)} removido com sucesso!`);
-    
-    setTimeout(() => setSuccessMessage(""), 3000);
+    setError(null);
+
+    try {
+      // Mapear tipo para campo da API
+      const fieldMap = {
+        avatar: "profileImageUrl",
+        background: "backgroundUrl",
+        cursor: "cursorUrl",
+        audio: "musicUrl",
+      };
+
+      // Atualizar via PATCH, limpando apenas o campo específico
+      await customizationService.patchPageSettings({
+        mediaUrls: {
+          [fieldMap[type]]: "",
+          profileImageUrl: type !== "avatar" ? assets.avatar?.url || "" : "",
+          backgroundUrl: type !== "background" ? assets.background?.url || "" : "",
+          cursorUrl: type !== "cursor" ? assets.cursor?.url || "" : "",
+          musicUrl: type !== "audio" ? assets.audio?.url || "" : "",
+        },
+      });
+
+      setAssets((prev) => ({ ...prev, [type]: null }));
+      setDeleteModal({ isOpen: false, type: null });
+      setSuccessMessage(`${getAssetTitle(type)} removido com sucesso!`);
+
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err: any) {
+      console.error("Erro ao remover asset:", err);
+
+      if (err.response?.status === 401) {
+        setError("Sessão expirada. Faça login novamente.");
+      } else {
+        setError(err.response?.data?.message || "Erro ao remover. Tente novamente.");
+      }
+      setDeleteModal({ isOpen: false, type: null });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleVolumeChange = (volume: number) => {
-    setAssets(prev => ({ ...prev, audioVolume: volume }));
+    setAssets((prev) => ({ ...prev, audioVolume: volume }));
   };
 
   const getAssetTitle = (type: string) => {
@@ -598,7 +701,10 @@ const DashboardAssets = () => {
     return titles[type] || type;
   };
 
-  // Animações
+  // ═══════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -613,6 +719,18 @@ const DashboardAssets = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 size={48} className="mx-auto mb-4 animate-spin text-[var(--color-primary)]" />
+          <p className="text-[var(--color-text-muted)]">Carregando assets...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] pb-8">
@@ -638,8 +756,45 @@ const DashboardAssets = () => {
             <FolderOpen className="text-[var(--color-primary)] w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
             Gerencie seus arquivos de mídia ativos.
           </h1>
+
+          <motion.button
+            onClick={loadAssets}
+            disabled={isLoading}
+            className="
+              p-2.5 rounded-[var(--border-radius-md)]
+              bg-[var(--color-surface)] border border-[var(--color-border)]
+              text-[var(--color-text-muted)] hover:text-[var(--color-text)]
+              transition-all duration-300
+            "
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Recarregar assets"
+          >
+            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+          </motion.button>
         </motion.div>
       </div>
+
+      {/* Error Message */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-6 p-4 rounded-[var(--border-radius-md)] bg-red-500/10 border border-red-500/30 flex items-center gap-3"
+          >
+            <AlertCircle size={20} className="text-red-400 flex-shrink-0" />
+            <span className="text-sm text-red-400 flex-1">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="p-1 rounded-full hover:bg-red-500/20 text-red-400"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Success Message */}
       <AnimatePresence>
@@ -680,25 +835,28 @@ const DashboardAssets = () => {
             className={`
               p-4 rounded-[var(--border-radius-md)]
               border transition-all duration-300
-              ${item.active 
-                ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]' 
-                : 'bg-[var(--color-surface)] border-[var(--color-border)]'
+              ${
+                item.active
+                  ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
+                  : "bg-[var(--color-surface)] border-[var(--color-border)]"
               }
             `}
           >
             <div className="flex items-center justify-between">
-              <item.icon 
-                size={20} 
-                className={item.active ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'} 
+              <item.icon
+                size={20}
+                className={item.active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}
               />
-              <span className={`
+              <span
+                className={`
                 w-2 h-2 rounded-full
-                ${item.active ? 'bg-green-400' : 'bg-[var(--color-text-muted)]'}
-              `} />
+                ${item.active ? "bg-green-400" : "bg-[var(--color-text-muted)]"}
+              `}
+              />
             </div>
             <p className="text-sm font-medium text-[var(--color-text)] mt-2">{item.label}</p>
-            <p className={`text-xs ${item.active ? 'text-green-400' : 'text-[var(--color-text-muted)]'}`}>
-              {item.active ? 'Ativo' : 'Não configurado'}
+            <p className={`text-xs ${item.active ? "text-green-400" : "text-[var(--color-text-muted)]"}`}>
+              {item.active ? "Ativo" : "Não configurado"}
             </p>
           </motion.div>
         ))}
@@ -711,9 +869,7 @@ const DashboardAssets = () => {
         animate="visible"
         className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
       >
-        {/* ═══════════════════════════════════════════════════════════ */}
         {/* AVATAR */}
-        {/* ═══════════════════════════════════════════════════════════ */}
         <motion.div variants={itemVariants}>
           <AssetsCard>
             <SectionHeader
@@ -724,76 +880,74 @@ const DashboardAssets = () => {
 
             <AssetPreviewCard
               asset={assets.avatar}
-              type="avatar"
               icon={User}
               title="Avatar"
               onRemove={() => setDeleteModal({ isOpen: true, type: "avatar" })}
               onView={() => setViewModal({ isOpen: true, type: "avatar" })}
+              disabled={isSubmitting}
             >
-              {/* Avatar Preview */}
-              <div className="flex justify-center">
-                <motion.div
-                  className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-[var(--color-primary)]/30"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <img
-                    src={assets.avatar?.url}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                </motion.div>
-              </div>
+              {assets.avatar && (
+                <div className="flex justify-center">
+                  <motion.div
+                    className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-[var(--color-primary)]/30"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <img
+                      src={assets.avatar.url}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                  </motion.div>
+                </div>
+              )}
             </AssetPreviewCard>
           </AssetsCard>
         </motion.div>
 
-        {/* ═══════════════════════════════════════════════════════════ */}
         {/* BACKGROUND */}
-        {/* ═══════════════════════════════════════════════════════════ */}
         <motion.div variants={itemVariants}>
           <AssetsCard>
             <SectionHeader
               icon={Image}
               title="Background"
-              description="Imagem ou vídeo de fundo do seu perfil"
+              description="Imagem de fundo do seu perfil"
             />
 
             <AssetPreviewCard
               asset={assets.background}
-              type="background"
               icon={Image}
               title="Background"
               onRemove={() => setDeleteModal({ isOpen: true, type: "background" })}
               onView={() => setViewModal({ isOpen: true, type: "background" })}
+              disabled={isSubmitting}
             >
-              {/* Background Preview */}
-              <motion.div
-                className="relative w-full h-40 rounded-[var(--border-radius-md)] overflow-hidden"
-                whileHover={{ scale: 1.02 }}
-              >
-                <img
-                  src={assets.background?.url}
-                  alt="Background"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <motion.button
-                  onClick={() => setViewModal({ isOpen: true, type: "background" })}
-                  className="absolute bottom-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+              {assets.background && (
+                <motion.div
+                  className="relative w-full h-40 rounded-[var(--border-radius-md)] overflow-hidden"
+                  whileHover={{ scale: 1.02 }}
                 >
-                  <Maximize2 size={14} />
-                </motion.button>
-              </motion.div>
+                  <img
+                    src={assets.background.url}
+                    alt="Background"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <motion.button
+                    onClick={() => setViewModal({ isOpen: true, type: "background" })}
+                    className="absolute bottom-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Maximize2 size={14} />
+                  </motion.button>
+                </motion.div>
+              )}
             </AssetPreviewCard>
           </AssetsCard>
         </motion.div>
 
-        {/* ═══════════════════════════════════════════════════════════ */}
         {/* CURSOR */}
-        {/* ═══════════════════════════════════════════════════════════ */}
         <motion.div variants={itemVariants}>
           <AssetsCard>
             <SectionHeader
@@ -804,43 +958,34 @@ const DashboardAssets = () => {
 
             <AssetPreviewCard
               asset={assets.cursor}
-              type="cursor"
               icon={MousePointer2}
               title="Cursor"
               onRemove={() => setDeleteModal({ isOpen: true, type: "cursor" })}
               onView={() => setViewModal({ isOpen: true, type: "cursor" })}
+              disabled={isSubmitting}
             >
-              {/* Cursor Preview */}
-              <div className="flex justify-center items-center py-4">
-                <motion.div
-                  className="
-                    w-24 h-24 rounded-[var(--border-radius-md)]
-                    bg-[var(--color-background)] border border-dashed border-[var(--color-border)]
-                    flex items-center justify-center
-                  "
-                  style={{
-                    cursor: assets.cursor ? `url(${assets.cursor.url}), auto` : 'default'
-                  }}
-                  whileHover={{ borderColor: 'var(--color-primary)' }}
-                >
-                  {assets.cursor ? (
-                    <img
-                      src={assets.cursor.url}
-                      alt="Cursor"
-                      className="w-12 h-12 object-contain"
-                    />
-                  ) : (
+              {assets.cursor && (
+                <div className="flex justify-center items-center py-4">
+                  <motion.div
+                    className="
+                      w-24 h-24 rounded-[var(--border-radius-md)]
+                      bg-[var(--color-background)] border border-dashed border-[var(--color-border)]
+                      flex items-center justify-center
+                    "
+                    style={{
+                      cursor: `url(${assets.cursor.url}), auto`,
+                    }}
+                    whileHover={{ borderColor: "var(--color-primary)" }}
+                  >
                     <MousePointer2 size={32} className="text-[var(--color-text-muted)]" />
-                  )}
-                </motion.div>
-              </div>
+                  </motion.div>
+                </div>
+              )}
             </AssetPreviewCard>
           </AssetsCard>
         </motion.div>
 
-        {/* ═══════════════════════════════════════════════════════════ */}
         {/* AUDIO */}
-        {/* ═══════════════════════════════════════════════════════════ */}
         <motion.div variants={itemVariants}>
           <AssetsCard>
             <SectionHeader
@@ -851,13 +996,12 @@ const DashboardAssets = () => {
 
             <AssetPreviewCard
               asset={assets.audio}
-              type="audio"
               icon={Music}
               title="Áudio"
               onRemove={() => setDeleteModal({ isOpen: true, type: "audio" })}
               onView={() => setViewModal({ isOpen: true, type: "audio" })}
+              disabled={isSubmitting}
             >
-              {/* Audio Player */}
               {assets.audio && (
                 <div className="mt-2">
                   <AudioPlayer
@@ -872,13 +1016,11 @@ const DashboardAssets = () => {
         </motion.div>
       </motion.div>
 
-      {/* ═══════════════════════════════════════════════════════════ */}
       {/* VIEW MODAL */}
-      {/* ═══════════════════════════════════════════════════════════ */}
       <Modal
         isOpen={viewModal.isOpen}
         onClose={() => setViewModal({ isOpen: false, type: null })}
-        title={`Visualizar ${viewModal.type ? getAssetTitle(viewModal.type) : ''}`}
+        title={`Visualizar ${viewModal.type ? getAssetTitle(viewModal.type) : ""}`}
         size={viewModal.type === "background" ? "xl" : "lg"}
       >
         {viewModal.type === "avatar" && assets.avatar && (
@@ -889,8 +1031,8 @@ const DashboardAssets = () => {
               className="w-64 h-64 rounded-full object-cover border-4 border-[var(--color-primary)]/30"
             />
             <div className="text-center">
-              <p className="text-sm text-[var(--color-text)]">{assets.avatar.filename}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">{assets.avatar.size} • {assets.avatar.mimeType}</p>
+              <p className="text-sm text-[var(--color-text)]">{getFileNameFromUrl(assets.avatar.url)}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{getMimeTypeFromUrl(assets.avatar.url)}</p>
             </div>
           </div>
         )}
@@ -903,15 +1045,15 @@ const DashboardAssets = () => {
               className="w-full h-auto rounded-[var(--border-radius-md)]"
             />
             <div className="text-center">
-              <p className="text-sm text-[var(--color-text)]">{assets.background.filename}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">{assets.background.size} • {assets.background.mimeType}</p>
+              <p className="text-sm text-[var(--color-text)]">{getFileNameFromUrl(assets.background.url)}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{getMimeTypeFromUrl(assets.background.url)}</p>
             </div>
           </div>
         )}
 
         {viewModal.type === "cursor" && assets.cursor && (
           <div className="flex flex-col items-center gap-4">
-            <div 
+            <div
               className="
                 w-48 h-48 rounded-[var(--border-radius-lg)]
                 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-background)]
@@ -920,11 +1062,7 @@ const DashboardAssets = () => {
               "
               style={{ cursor: `url(${assets.cursor.url}), auto` }}
             >
-              <img
-                src={assets.cursor.url}
-                alt="Cursor"
-                className="w-24 h-24 object-contain"
-              />
+              <MousePointer2 size={48} className="text-[var(--color-text-muted)]" />
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
               Mova o mouse sobre a área acima para testar o cursor
@@ -942,30 +1080,28 @@ const DashboardAssets = () => {
               />
             </div>
             <div className="text-center">
-              <p className="text-sm text-[var(--color-text)]">{assets.audio.filename}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">{assets.audio.size} • {assets.audio.mimeType}</p>
+              <p className="text-sm text-[var(--color-text)]">{getFileNameFromUrl(assets.audio.url)}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{getMimeTypeFromUrl(assets.audio.url)}</p>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* ═══════════════════════════════════════════════════════════ */}
       {/* DELETE MODAL */}
-      {/* ═══════════════════════════════════════════════════════════ */}
       <Modal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, type: null })}
-        title={`Remover ${deleteModal.type ? getAssetTitle(deleteModal.type) : ''}`}
+        title={`Remover ${deleteModal.type ? getAssetTitle(deleteModal.type) : ""}`}
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-4 rounded-[var(--border-radius-md)] bg-red-500/10 border border-red-500/30">
             <AlertCircle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-[var(--color-text)]">
-                Tem certeza que deseja remover este {deleteModal.type ? getAssetTitle(deleteModal.type).toLowerCase() : 'arquivo'}?
+                Tem certeza que deseja remover este {deleteModal.type ? getAssetTitle(deleteModal.type).toLowerCase() : "arquivo"}?
               </p>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                O arquivo será removido permanentemente do seu perfil.
+                Ele será removido da sua customização. Você pode configurá-lo novamente a qualquer momento.
               </p>
             </div>
           </div>
@@ -973,7 +1109,8 @@ const DashboardAssets = () => {
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
             <motion.button
               onClick={() => setDeleteModal({ isOpen: false, type: null })}
-              className="flex-1 px-4 py-2.5 rounded-[var(--border-radius-md)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] font-medium transition-all"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 rounded-[var(--border-radius-md)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] font-medium transition-all disabled:opacity-50"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -988,11 +1125,7 @@ const DashboardAssets = () => {
             >
               {isSubmitting ? (
                 <>
-                  <motion.div
-                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  />
+                  <Loader2 size={16} className="animate-spin" />
                   Removendo...
                 </>
               ) : (
