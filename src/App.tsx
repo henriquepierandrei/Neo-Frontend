@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { ThemeProvider } from "./hooks/ThemeProvider";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ProfileProvider } from "./contexts/UserContext"; // 👈 IMPORTAR
+import { ProfileProvider } from "./contexts/UserContext";
+import { LinksProvider } from "./contexts/LinksContext"; // 👈 Importar aqui
 
 import DashboardLayout from "./pages/dashboardpages/DashboardLayout";
 import Login from "./pages/authpages/Login";
@@ -31,147 +32,150 @@ function App() {
     <ThemeProvider>
       <Router>
         <AuthProvider>
-          {/* 👇 ProfileProvider DENTRO do AuthProvider (pois usa useAuth) */}
           <ProfileProvider>
-            <TitleManager />
+            {/* 👇 LinksProvider aqui no nível do app (ou dentro do DashboardLayout) */}
+            <LinksProvider>
+              <TitleManager />
 
-            <div className="min-h-screen transition-colors duration-300">
-              <main>
-                <Routes>
-                  {/* Rotas públicas */}
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/validate-email" element={<EmailValidation />} />
-                  <Route path="/plans" element={<PrincingSection />} />
-                  <Route path="/ranking" element={<RankingPage />} />
+              <div className="min-h-screen transition-colors duration-300">
+                <main>
+                  <Routes>
+                    {/* Rotas públicas */}
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/validate-email" element={<EmailValidation />} />
+                    <Route path="/plans" element={<PrincingSection />} />
+                    <Route path="/ranking" element={<RankingPage />} />
 
-                  {/* Dashboard protegido */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardStart />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    {/* Dashboard protegido */}
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardStart />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/start"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardStart />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/start"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardStart />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/settings"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardSettings />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/settings"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardSettings />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/tags"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardTags />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/tags"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardTags />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/logs"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <LogsPremium />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/logs"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <LogsPremium />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/links"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardLinks />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    {/* 👇 Sem LinksLayout - já está no nível do app */}
+                    <Route
+                      path="/dashboard/links"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardLinks />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/socialmedia"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardSocial />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/socialmedia"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardSocial />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/store"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardStore />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/store"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardStore />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/assets"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardAssets />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/assets"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardAssets />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/inventory"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardInventory />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/inventory"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardInventory />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard/customization"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardLayout>
-                          <DashboardCustomization />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/dashboard/customization"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout>
+                            <DashboardCustomization />
+                          </DashboardLayout>
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route path="*" element={<Navigate to="/login" replace />} />
-                </Routes>
-              </main>
-            </div>
+                    <Route path="*" element={<Navigate to="/login" replace />} />
+                  </Routes>
+                </main>
+              </div>
+            </LinksProvider>
           </ProfileProvider>
         </AuthProvider>
       </Router>

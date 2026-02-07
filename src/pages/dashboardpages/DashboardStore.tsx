@@ -24,7 +24,6 @@ import {
   Zap,
   Gift,
   Tag,
-  ImageIcon,
   Video,
   FileCode,
   User,
@@ -784,8 +783,7 @@ const FramePreview = ({
   frameUrl,
   size = "medium",
   profileImageUrl = PREVIEW_PROFILE_IMAGE,
-  rarity,
-  isAnimated = false,
+  rarity
 }: {
   frameUrl: string;
   size?: "small" | "medium" | "large";
@@ -1689,8 +1687,7 @@ const DashboardStore = () => {
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
 
-  const { profileData, isLoadingProfile } = useProfile();
-
+  const { profileData, } = useProfile();
 
 
   // Carregar itens da loja

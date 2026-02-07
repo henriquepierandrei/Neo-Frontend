@@ -1,5 +1,5 @@
 // components/Sidebar/Sidebar.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/ThemeProvider";
 import { useAuth } from "../../hooks/useAuth";
@@ -47,13 +47,6 @@ interface NavItem {
 interface NavSection {
   title: string;
   items: NavItem[];
-}
-
-// Tipo para a resposta do endpoint /user/profile
-interface SimpleProfileResponse {
-  profileImageUrl: string | null;
-  url: string;
-  name: string;
 }
 
 // ═══════════════════════════════════════════════════════════

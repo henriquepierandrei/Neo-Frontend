@@ -1,5 +1,5 @@
 // pages/Settings/Settings.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
@@ -27,6 +27,8 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
+import { useProfile } from "../../contexts/UserContext";
+import api from "../../services/api"; // ajuste o path conforme seu projeto
 
 // ═══════════════════════════════════════════════════════════
 // ÍCONES CUSTOMIZADOS
@@ -51,7 +53,6 @@ const DiscordIcon = () => (
 // COMPONENTES BASE
 // ═══════════════════════════════════════════════════════════
 
-// Toggle Component
 const Toggle = ({
   enabled,
   onChange,
@@ -79,7 +80,6 @@ const Toggle = ({
   </motion.button>
 );
 
-// Input Component
 const Input = ({
   label,
   type = "text",
@@ -116,8 +116,8 @@ const Input = ({
           text-[var(--color-text)] placeholder-[var(--color-text-muted)]
           focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50
           ${Icon ? "pl-10" : ""}
-          ${error 
-            ? "border-red-500/50 focus:border-red-500" 
+          ${error
+            ? "border-red-500/50 focus:border-red-500"
             : "border-[var(--color-border)] focus:border-[var(--color-primary)]"
           }
         `}
@@ -132,7 +132,6 @@ const Input = ({
   </div>
 );
 
-// Modal Component
 const Modal = ({
   isOpen,
   onClose,
@@ -147,7 +146,6 @@ const Modal = ({
   <AnimatePresence>
     {isOpen && (
       <>
-        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -155,8 +153,6 @@ const Modal = ({
           onClick={onClose}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
         />
-        
-        {/* Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -164,13 +160,7 @@ const Modal = ({
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
-          <div className="
-            w-full max-w-md
-            bg-[var(--color-background)] backdrop-blur-[var(--blur-amount)]
-            border border-[var(--color-border)] rounded-[var(--border-radius-xl)]
-            shadow-2xl overflow-hidden
-          ">
-            {/* Header */}
+          <div className="w-full max-w-md bg-[var(--color-background)] backdrop-blur-[var(--blur-amount)] border border-[var(--color-border)] rounded-[var(--border-radius-xl)] shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--color-border)]">
               <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text)]">{title}</h2>
               <motion.button
@@ -182,11 +172,7 @@ const Modal = ({
                 <X size={18} />
               </motion.button>
             </div>
-            
-            {/* Content */}
-            <div className="p-4 sm:p-6">
-              {children}
-            </div>
+            <div className="p-4 sm:p-6">{children}</div>
           </div>
         </motion.div>
       </>
@@ -194,7 +180,6 @@ const Modal = ({
   </AnimatePresence>
 );
 
-// Card Component
 const SettingsCard = ({
   children,
   className = "",
@@ -205,17 +190,12 @@ const SettingsCard = ({
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    className={`
-      bg-[var(--card-background-glass)] backdrop-blur-[var(--blur-amount)]
-      border border-[var(--color-border)] rounded-[var(--border-radius-lg)]
-      p-4 sm:p-6 ${className}
-    `}
+    className={`bg-[var(--card-background-glass)] backdrop-blur-[var(--blur-amount)] border border-[var(--color-border)] rounded-[var(--border-radius-lg)] p-4 sm:p-6 ${className}`}
   >
     {children}
   </motion.div>
 );
 
-// Section Header
 const SectionHeader = ({
   icon: Icon,
   title,
@@ -236,7 +216,6 @@ const SectionHeader = ({
   </div>
 );
 
-// Settings Row - Responsivo
 const SettingsRow = ({
   icon: Icon,
   title,
@@ -251,10 +230,7 @@ const SettingsRow = ({
   isLast?: boolean;
 }) => (
   <div
-    className={`
-      flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 sm:py-4
-      ${!isLast ? "border-b border-[var(--color-border)]" : ""}
-    `}
+    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 sm:py-4 ${!isLast ? "border-b border-[var(--color-border)]" : ""}`}
   >
     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
       <div className="p-2 rounded-[var(--border-radius-sm)] bg-[var(--color-surface)] flex-shrink-0">
@@ -265,13 +241,10 @@ const SettingsRow = ({
         <p className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">{description}</p>
       </div>
     </div>
-    <div className="flex justify-end sm:justify-start flex-shrink-0">
-      {action}
-    </div>
+    <div className="flex justify-end sm:justify-start flex-shrink-0">{action}</div>
   </div>
 );
 
-// Connection Card - Com suporte a "Em breve"
 const ConnectionCard = ({
   icon,
   name,
@@ -288,22 +261,17 @@ const ConnectionCard = ({
   onConnect: () => void;
 }) => (
   <motion.div
-    className={`
-      flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-[var(--border-radius-md)]
-      border transition-all duration-300
-      ${comingSoon 
+    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-[var(--border-radius-md)] border transition-all duration-300 ${
+      comingSoon
         ? "border-[var(--color-border)] bg-[var(--color-surface)] opacity-70"
         : connected
           ? "border-green-500/30 bg-green-500/5"
           : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"
-      }
-    `}
+    }`}
     whileHover={comingSoon ? {} : { scale: 1.01 }}
   >
     <div className="flex items-center gap-3 sm:gap-4">
-      <div className="p-2 rounded-[var(--border-radius-sm)] bg-[var(--color-background)] flex-shrink-0">
-        {icon}
-      </div>
+      <div className="p-2 rounded-[var(--border-radius-sm)] bg-[var(--color-background)] flex-shrink-0">{icon}</div>
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-sm font-medium text-[var(--color-text)]">{name}</h3>
@@ -326,20 +294,16 @@ const ConnectionCard = ({
         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{description}</p>
       </div>
     </div>
-
     <motion.button
       onClick={comingSoon ? undefined : onConnect}
       disabled={comingSoon}
-      className={`
-        px-3 sm:px-4 py-2 rounded-[var(--border-radius-sm)] text-xs sm:text-sm font-medium
-        transition-all duration-300 flex-shrink-0 w-full sm:w-auto
-        ${comingSoon
+      className={`px-3 sm:px-4 py-2 rounded-[var(--border-radius-sm)] text-xs sm:text-sm font-medium transition-all duration-300 flex-shrink-0 w-full sm:w-auto ${
+        comingSoon
           ? "bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] cursor-not-allowed"
           : connected
             ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
             : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)]"
-        }
-      `}
+      }`}
       whileHover={comingSoon ? {} : { scale: 1.05 }}
       whileTap={comingSoon ? {} : { scale: 0.95 }}
     >
@@ -348,7 +312,6 @@ const ConnectionCard = ({
   </motion.div>
 );
 
-// Premium Feature Card
 const PremiumFeature = ({
   icon: Icon,
   title,
@@ -363,37 +326,25 @@ const PremiumFeature = ({
   onToggle: () => void;
 }) => (
   <motion.div
-    className={`
-      flex items-center justify-between p-2.5 sm:p-3 rounded-[var(--border-radius-sm)]
-      border transition-all duration-300
-      ${locked
+    className={`flex items-center justify-between p-2.5 sm:p-3 rounded-[var(--border-radius-sm)] border transition-all duration-300 ${
+      locked
         ? "border-[var(--color-border)] bg-[var(--color-surface)] opacity-60"
         : enabled
           ? "border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5"
           : "border-[var(--color-border)] bg-[var(--color-surface)]"
-      }
-    `}
+    }`}
     whileHover={locked ? {} : { scale: 1.02 }}
   >
     <div className="flex items-center gap-2 sm:gap-3">
-      <Icon
-        size={16}
-        className={`sm:w-[18px] sm:h-[18px] ${locked ? "text-[var(--color-text-muted)]" : "text-[var(--color-primary)]"}`}
-      />
+      <Icon size={16} className={`sm:w-[18px] sm:h-[18px] ${locked ? "text-[var(--color-text-muted)]" : "text-[var(--color-primary)]"}`} />
       <span className={`text-xs sm:text-sm font-medium ${locked ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]"}`}>
         {title}
       </span>
     </div>
-
-    {locked ? (
-      <Lock size={14} className="text-[var(--color-text-muted)]" />
-    ) : (
-      <Toggle enabled={enabled} onChange={onToggle} />
-    )}
+    {locked ? <Lock size={14} className="text-[var(--color-text-muted)]" /> : <Toggle enabled={enabled} onChange={onToggle} />}
   </motion.div>
 );
 
-// Info Badge - Responsivo
 const InfoBadge = ({
   icon: Icon,
   label,
@@ -426,35 +377,70 @@ const InfoBadge = ({
 };
 
 // ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+
+const formatDate = (dateString: string | undefined | null): string => {
+  if (!dateString) return "—";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("pt-BR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL
 // ═══════════════════════════════════════════════════════════
 
 const DashboardSettings = () => {
-  // Estados
-  const [acceptGifts, setAcceptGifts] = useState(true);
+  // ── Dados do perfil via Context ──────────────────────────
+  const { profileData, isLoadingProfile } = useProfile();
+
+  const displayName = profileData?.name || "Usuário";
+  const profileUrl = profileData?.url || "usuario";
+  const isPremium = profileData?.premium ?? false;
+
+  // ── Estados locais ───────────────────────────────────────
+  const [acceptGifts, setAcceptGifts] = useState<boolean>(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [discordConnected, setDiscordConnected] = useState(false);
-  const [isPremium] = useState(false);
 
-  // Estados dos Modais
+  // Sincroniza receiveGifts com o dado vindo da API
+  useEffect(() => {
+    if (profileData) {
+      setAcceptGifts(profileData.receiveGifts ?? false);
+    }
+  }, [profileData]);
+
+  // ── Modais ───────────────────────────────────────────────
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  // Estados dos formulários
+  // ── Formulários ──────────────────────────────────────────
   const [emailForm, setEmailForm] = useState({
-    newEmail: "",
+    currentEmail: "",
     password: "",
+    newEmail: "",
   });
+
   const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
+    oldPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [apiError, setApiError] = useState("");
 
-  // Premium features state
+  // ── Premium features ────────────────────────────────────
   const [premiumFeatures, setPremiumFeatures] = useState({
     frame: false,
     premiumTag: false,
@@ -472,115 +458,161 @@ const DashboardSettings = () => {
     setPremiumFeatures((prev) => ({ ...prev, [feature]: !prev[feature] }));
   };
 
-  // Handlers dos formulários
+  // ═══════════════════════════════════════════════════════════
+  // HANDLER: Alterar E-mail  →  PUT /update/email
+  // Body: { email, password, newEmail }
+  // ═══════════════════════════════════════════════════════════
   const handleEmailSubmit = async () => {
     setFormErrors({});
-    
-    // Validações
+    setApiError("");
+
     const errors: Record<string, string> = {};
-    
+
+    if (!emailForm.currentEmail) {
+      errors.currentEmail = "Digite seu e-mail atual";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.currentEmail)) {
+      errors.currentEmail = "E-mail inválido";
+    }
+
     if (!emailForm.newEmail) {
       errors.newEmail = "Digite o novo e-mail";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.newEmail)) {
       errors.newEmail = "E-mail inválido";
     }
-    
+
     if (!emailForm.password) {
       errors.password = "Digite sua senha para confirmar";
     }
-    
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
-    // Simular API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setSuccessMessage("E-mail alterado com sucesso!");
-    
-    setTimeout(() => {
-      setIsEmailModalOpen(false);
-      setEmailForm({ newEmail: "", password: "" });
-      setSuccessMessage("");
-    }, 2000);
+
+    try {
+      await api.put("/user/profile/update/email", {
+        email: emailForm.currentEmail,
+        password: emailForm.password,
+        newEmail: emailForm.newEmail,
+      });
+
+      setSuccessMessage("E-mail alterado com sucesso!");
+
+      setTimeout(() => {
+        setIsEmailModalOpen(false);
+        setEmailForm({ currentEmail: "", password: "", newEmail: "" });
+        setSuccessMessage("");
+      }, 2000);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Erro ao alterar e-mail. Verifique os dados e tente novamente.";
+      setApiError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  // ═══════════════════════════════════════════════════════════
+  // HANDLER: Alterar Senha  →  PUT /user/profile/update/password
+  // Body: { oldPassword, newPassword }
+  // ═══════════════════════════════════════════════════════════
   const handlePasswordSubmit = async () => {
     setFormErrors({});
-    
-    // Validações
+    setApiError("");
+
     const errors: Record<string, string> = {};
-    
-    if (!passwordForm.currentPassword) {
-      errors.currentPassword = "Digite sua senha atual";
+
+    if (!passwordForm.oldPassword) {
+      errors.oldPassword = "Digite sua senha atual";
     }
-    
+
     if (!passwordForm.newPassword) {
       errors.newPassword = "Digite a nova senha";
     } else if (passwordForm.newPassword.length < 8) {
       errors.newPassword = "A senha deve ter pelo menos 8 caracteres";
     }
-    
+
     if (!passwordForm.confirmPassword) {
       errors.confirmPassword = "Confirme a nova senha";
     } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       errors.confirmPassword = "As senhas não coincidem";
     }
-    
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
-    // Simular API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setSuccessMessage("Senha alterada com sucesso!");
-    
-    setTimeout(() => {
-      setIsPasswordModalOpen(false);
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      setSuccessMessage("");
-    }, 2000);
+
+    try {
+      await api.put("/user/profile/update/password", {
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      setSuccessMessage("Senha alterada com sucesso!");
+
+      setTimeout(() => {
+        setIsPasswordModalOpen(false);
+        setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+        setSuccessMessage("");
+      }, 2000);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Erro ao alterar senha. Verifique os dados e tente novamente.";
+      setApiError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Reset form errors when modals close
+  // ── Reset modais ─────────────────────────────────────────
   const handleCloseEmailModal = () => {
     setIsEmailModalOpen(false);
-    setEmailForm({ newEmail: "", password: "" });
+    setEmailForm({ currentEmail: "", password: "", newEmail: "" });
     setFormErrors({});
     setSuccessMessage("");
+    setApiError("");
   };
 
   const handleClosePasswordModal = () => {
     setIsPasswordModalOpen(false);
-    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
     setFormErrors({});
     setSuccessMessage("");
+    setApiError("");
   };
 
-  // Animação de entrada escalonada
+  // ── Animações ────────────────────────────────────────────
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
+
+  // ── Loading skeleton ────────────────────────────────────
+  if (isLoadingProfile) {
+    return (
+      <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
+        <motion.div
+          className="w-8 h-8 border-3 border-[var(--color-primary)]/30 border-t-[var(--color-primary)] rounded-full"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] pb-8">
@@ -598,11 +630,7 @@ const DashboardSettings = () => {
           <span className="text-[var(--color-text)]">Configurações</span>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-text)] flex items-center gap-2 sm:gap-3">
             <SettingsIcon className="text-[var(--color-primary)] w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
             Configurações da Conta
@@ -620,7 +648,7 @@ const DashboardSettings = () => {
         animate="visible"
         className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6"
       >
-        {/* Informações da Conta */}
+        {/* ── Informações da Conta ───────────────────────── */}
         <motion.div variants={itemVariants}>
           <SettingsCard>
             <SectionHeader
@@ -633,7 +661,7 @@ const DashboardSettings = () => {
               <SettingsRow
                 icon={Mail}
                 title="E-mail"
-                description="henriquepierandrei1@gmail.com"
+                description="Altere o e-mail vinculado à sua conta."
                 action={
                   <motion.button
                     onClick={() => setIsEmailModalOpen(true)}
@@ -679,7 +707,7 @@ const DashboardSettings = () => {
           </SettingsCard>
         </motion.div>
 
-        {/* Conexões e Segurança */}
+        {/* ── Conexões e Segurança ──────────────────────── */}
         <motion.div variants={itemVariants}>
           <SettingsCard>
             <SectionHeader
@@ -697,7 +725,6 @@ const DashboardSettings = () => {
                 comingSoon={true}
                 onConnect={() => setGoogleConnected(!googleConnected)}
               />
-
               <ConnectionCard
                 icon={<DiscordIcon />}
                 name="Conta do Discord"
@@ -710,7 +737,7 @@ const DashboardSettings = () => {
           </SettingsCard>
         </motion.div>
 
-        {/* Informações */}
+        {/* ── Informações ───────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <SettingsCard>
             <SectionHeader
@@ -720,8 +747,11 @@ const DashboardSettings = () => {
             />
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <InfoBadge icon={Calendar} label="Criação" value="25 de julho de 2025" />
-
+              <InfoBadge
+                icon={Calendar}
+                label="Criação"
+                value={formatDate(profileData?.createdAt)}
+              />
               <InfoBadge
                 icon={Crown}
                 label="Premium"
@@ -732,18 +762,12 @@ const DashboardSettings = () => {
           </SettingsCard>
         </motion.div>
 
-        {/* Premium Section */}
+        {/* ── Premium Section ───────────────────────────── */}
         <motion.div variants={itemVariants}>
           <SettingsCard
-            className={`
-              relative overflow-hidden
-              ${!isPremium ? "border-[var(--color-primary)]/30" : "border-green-500/30"}
-            `}
+            className={`relative overflow-hidden ${!isPremium ? "border-[var(--color-primary)]/30" : "border-green-500/30"}`}
           >
-            {/* Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 via-transparent to-[var(--color-secondary)]/5 pointer-events-none" />
-
-        
 
             <div className="relative z-10">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
@@ -772,74 +796,18 @@ const DashboardSettings = () => {
                 )}
               </div>
 
-              {/* Premium Features Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                <PremiumFeature
-                  icon={Frame}
-                  title="Moldura"
-                  enabled={premiumFeatures.frame}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("frame")}
-                />
-                <PremiumFeature
-                  icon={BadgeCheck}
-                  title="Tag premium"
-                  enabled={premiumFeatures.premiumTag}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("premiumTag")}
-                />
-                <PremiumFeature
-                  icon={Verified}
-                  title="Tag verificado"
-                  enabled={premiumFeatures.verifiedTag}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("verifiedTag")}
-                />
-                <PremiumFeature
-                  icon={Zap}
-                  title="Neon no card"
-                  enabled={premiumFeatures.neonCard}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("neonCard")}
-                />
-                <PremiumFeature
-                  icon={Palette}
-                  title="Cor do Neon"
-                  enabled={premiumFeatures.neonColor}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("neonColor")}
-                />
-                <PremiumFeature
-                  icon={Image}
-                  title="Favicon"
-                  enabled={premiumFeatures.favicon}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("favicon")}
-                />
-                <PremiumFeature
-                  icon={Images}
-                  title="Album de fotos"
-                  enabled={premiumFeatures.photoAlbum}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("photoAlbum")}
-                />
-                <PremiumFeature
-                  icon={EyeOff}
-                  title="Ocultar Views"
-                  enabled={premiumFeatures.hideViews}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("hideViews")}
-                />
-                <PremiumFeature
-                  icon={Eye}
-                  title="Ocultar Marca"
-                  enabled={premiumFeatures.hideBrand}
-                  locked={!isPremium}
-                  onToggle={() => togglePremiumFeature("hideBrand")}
-                />
+                <PremiumFeature icon={Frame} title="Moldura" enabled={premiumFeatures.frame} locked={!isPremium} onToggle={() => togglePremiumFeature("frame")} />
+                <PremiumFeature icon={BadgeCheck} title="Tag premium" enabled={premiumFeatures.premiumTag} locked={!isPremium} onToggle={() => togglePremiumFeature("premiumTag")} />
+                <PremiumFeature icon={Verified} title="Tag verificado" enabled={premiumFeatures.verifiedTag} locked={!isPremium} onToggle={() => togglePremiumFeature("verifiedTag")} />
+                <PremiumFeature icon={Zap} title="Neon no card" enabled={premiumFeatures.neonCard} locked={!isPremium} onToggle={() => togglePremiumFeature("neonCard")} />
+                <PremiumFeature icon={Palette} title="Cor do Neon" enabled={premiumFeatures.neonColor} locked={!isPremium} onToggle={() => togglePremiumFeature("neonColor")} />
+                <PremiumFeature icon={Image} title="Favicon" enabled={premiumFeatures.favicon} locked={!isPremium} onToggle={() => togglePremiumFeature("favicon")} />
+                <PremiumFeature icon={Images} title="Album de fotos" enabled={premiumFeatures.photoAlbum} locked={!isPremium} onToggle={() => togglePremiumFeature("photoAlbum")} />
+                <PremiumFeature icon={EyeOff} title="Ocultar Views" enabled={premiumFeatures.hideViews} locked={!isPremium} onToggle={() => togglePremiumFeature("hideViews")} />
+                <PremiumFeature icon={Eye} title="Ocultar Marca" enabled={premiumFeatures.hideBrand} locked={!isPremium} onToggle={() => togglePremiumFeature("hideBrand")} />
               </div>
 
-              {/* Premium CTA */}
               {!isPremium && (
                 <motion.div
                   className="mt-4 sm:mt-6 p-3 sm:p-4 rounded-[var(--border-radius-md)] bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10 border border-[var(--color-primary)/30]"
@@ -850,9 +818,7 @@ const DashboardSettings = () => {
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Sparkles size={18} className="sm:w-5 sm:h-5 text-[var(--color-primary)] flex-shrink-0" />
                     <p className="text-xs sm:text-sm text-[var(--color-text-muted)]">
-                      <span className="text-[var(--color-text)] font-medium">
-                        Desbloqueie todos os recursos
-                      </span>{" "}
+                      <span className="text-[var(--color-text)] font-medium">Desbloqueie todos os recursos</span>{" "}
                       e personalize seu perfil do seu jeito!
                     </p>
                   </div>
@@ -864,13 +830,10 @@ const DashboardSettings = () => {
       </motion.div>
 
       {/* ═══════════════════════════════════════════════════════════ */}
-      {/* MODAL: Alterar E-mail */}
+      {/* MODAL: Alterar E-mail                                      */}
+      {/* PUT /user/profile/update/email  →  { email, password, newEmail }        */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      <Modal
-        isOpen={isEmailModalOpen}
-        onClose={handleCloseEmailModal}
-        title="Alterar E-mail"
-      >
+      <Modal isOpen={isEmailModalOpen} onClose={handleCloseEmailModal} title="Alterar E-mail">
         {successMessage ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -885,8 +848,30 @@ const DashboardSettings = () => {
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-text-muted)]">
-              Para alterar seu e-mail, digite o novo endereço e confirme com sua senha.
+              Para alterar seu e-mail, preencha os campos abaixo e confirme com sua senha.
             </p>
+
+            {/* Erro da API */}
+            {apiError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 rounded-[var(--border-radius-sm)] bg-red-500/10 border border-red-500/30 flex items-center gap-2"
+              >
+                <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+                <p className="text-xs sm:text-sm text-red-400">{apiError}</p>
+              </motion.div>
+            )}
+
+            <Input
+              label="E-mail Atual"
+              type="email"
+              placeholder="seuemail@exemplo.com"
+              value={emailForm.currentEmail}
+              onChange={(value) => setEmailForm({ ...emailForm, currentEmail: value })}
+              icon={Mail}
+              error={formErrors.currentEmail}
+            />
 
             <Input
               label="Novo E-mail"
@@ -943,13 +928,10 @@ const DashboardSettings = () => {
       </Modal>
 
       {/* ═══════════════════════════════════════════════════════════ */}
-      {/* MODAL: Alterar Senha */}
+      {/* MODAL: Alterar Senha                                       */}
+      {/* PUT /user/profile/update/password  →  { oldPassword, newPassword }      */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      <Modal
-        isOpen={isPasswordModalOpen}
-        onClose={handleClosePasswordModal}
-        title="Alterar Senha"
-      >
+      <Modal isOpen={isPasswordModalOpen} onClose={handleClosePasswordModal} title="Alterar Senha">
         {successMessage ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -967,14 +949,26 @@ const DashboardSettings = () => {
               Para sua segurança, digite sua senha atual antes de criar uma nova.
             </p>
 
+            {/* Erro da API */}
+            {apiError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 rounded-[var(--border-radius-sm)] bg-red-500/10 border border-red-500/30 flex items-center gap-2"
+              >
+                <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+                <p className="text-xs sm:text-sm text-red-400">{apiError}</p>
+              </motion.div>
+            )}
+
             <Input
               label="Senha Atual"
               type="password"
               placeholder="Digite sua senha atual"
-              value={passwordForm.currentPassword}
-              onChange={(value) => setPasswordForm({ ...passwordForm, currentPassword: value })}
+              value={passwordForm.oldPassword}
+              onChange={(value) => setPasswordForm({ ...passwordForm, oldPassword: value })}
               icon={Lock}
-              error={formErrors.currentPassword}
+              error={formErrors.oldPassword}
             />
 
             <div className="h-px bg-[var(--color-border)] my-2" />
@@ -1005,8 +999,16 @@ const DashboardSettings = () => {
               <ul className="space-y-1">
                 {[
                   { text: "Mínimo de 8 caracteres", valid: passwordForm.newPassword.length >= 8 },
-                  { text: "Letras e números", valid: /[a-zA-Z]/.test(passwordForm.newPassword) && /[0-9]/.test(passwordForm.newPassword) },
-                  { text: "Senhas coincidem", valid: passwordForm.newPassword === passwordForm.confirmPassword && passwordForm.confirmPassword.length > 0 },
+                  {
+                    text: "Letras e números",
+                    valid: /[a-zA-Z]/.test(passwordForm.newPassword) && /[0-9]/.test(passwordForm.newPassword),
+                  },
+                  {
+                    text: "Senhas coincidem",
+                    valid:
+                      passwordForm.newPassword === passwordForm.confirmPassword &&
+                      passwordForm.confirmPassword.length > 0,
+                  },
                 ].map((req, i) => (
                   <li key={i} className="flex items-center gap-2 text-xs">
                     {req.valid ? (

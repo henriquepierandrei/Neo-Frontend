@@ -1,4 +1,3 @@
-// contexts/ProfileContext.tsx
 import {
   createContext,
   useContext,
@@ -14,6 +13,9 @@ interface SimpleProfileResponse {
   profileImageUrl: string | null;
   url: string;
   name: string;
+  createdAt: string;
+  premium: boolean;
+  receiveGifts: boolean;
 }
 
 interface ProfileContextData {
@@ -36,7 +38,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
 
-  // useCallback para estabilizar a referência da função
   const fetchProfile = useCallback(async () => {
     try {
       setIsLoadingProfile(true);
@@ -53,16 +54,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user) {
-      // Só busca se ainda não tem dados carregados
       if (!profileData) {
         fetchProfile();
       }
     } else {
-      // Usuário deslogou → limpa tudo
       setProfileData(null);
       setProfileImageError(false);
     }
-  }, [user]); // ← depende apenas do user
+  }, [user, profileData, fetchProfile]);
 
   return (
     <ProfileContext.Provider
