@@ -1,6 +1,7 @@
 // pages/Assets/Assets.tsx
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useProfile } from "../../contexts/UserContext";
 import {
   FolderOpen,
   ChevronRight,
@@ -29,7 +30,6 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { customizationService } from "../../services/customizationService";
-import type { UserPageFrontendResponse } from "../../types/customization.types";
 
 // ═══════════════════════════════════════════════════════════
 // TIPOS
@@ -83,6 +83,30 @@ const getMimeTypeFromUrl = (url: string): string => {
 
 const formatDate = (date: Date): string => {
   return new Intl.DateTimeFormat('pt-BR').format(date);
+};
+
+/**
+ * Converte dados do ProfileContext para o formato de assets
+ */
+const profileDataToAssets = (
+  profileData: NonNullable<ReturnType<typeof useProfile>['profileData']>
+): Omit<ActiveAssets, 'audioVolume'> => {
+  const mediaUrls = profileData.pageSettings.mediaUrls;
+
+  return {
+    avatar: mediaUrls.profileImageUrl
+      ? { type: "avatar", url: mediaUrls.profileImageUrl, isActive: true }
+      : null,
+    background: mediaUrls.backgroundUrl
+      ? { type: "background", url: mediaUrls.backgroundUrl, isActive: true }
+      : null,
+    cursor: mediaUrls.cursorUrl
+      ? { type: "cursor", url: mediaUrls.cursorUrl, isActive: true }
+      : null,
+    audio: mediaUrls.musicUrl
+      ? { type: "audio", url: mediaUrls.musicUrl, isActive: true }
+      : null,
+  };
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -558,10 +582,22 @@ const AssetPreviewCard = ({
 };
 
 // ═══════════════════════════════════════════════════════════
-// PÁGINA PRINCIPAL COM INTEGRAÇÃO
+// PÁGINA PRINCIPAL COM INTEGRAÇÃO DO CONTEXT
 // ═══════════════════════════════════════════════════════════
 
 const DashboardAssets = () => {
+  // ═══════════════════════════════════════════════════════════
+  // CONTEXTO DO PERFIL
+  // ═══════════════════════════════════════════════════════════
+  const { 
+    profileData, 
+    isLoadingProfile, 
+    refreshProfile 
+  } = useProfile();
+
+  // ═══════════════════════════════════════════════════════════
+  // ESTADOS LOCAIS
+  // ═══════════════════════════════════════════════════════════
   const [assets, setAssets] = useState<ActiveAssets>({
     avatar: null,
     background: null,
@@ -570,7 +606,7 @@ const DashboardAssets = () => {
     audioVolume: 50,
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
@@ -586,63 +622,35 @@ const DashboardAssets = () => {
   }>({ isOpen: false, type: null });
 
   // ═══════════════════════════════════════════════════════════
-  // CARREGAR ASSETS DA API
+  // SINCRONIZAR COM DADOS DO CONTEXTO
   // ═══════════════════════════════════════════════════════════
-
-  const loadAssets = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await customizationService.getUserPageSettings();
-
-      // Transformar mediaUrls em assets
-      const mediaUrls = response.mediaUrls;
-
-      setAssets({
-        avatar: mediaUrls.profileImageUrl
-          ? { type: "avatar", url: mediaUrls.profileImageUrl, isActive: true }
-          : null,
-        background: mediaUrls.backgroundUrl
-          ? { type: "background", url: mediaUrls.backgroundUrl, isActive: true }
-          : null,
-        cursor: mediaUrls.cursorUrl
-          ? { type: "cursor", url: mediaUrls.cursorUrl, isActive: true }
-          : null,
-        audio: mediaUrls.musicUrl
-          ? { type: "audio", url: mediaUrls.musicUrl, isActive: true }
-          : null,
-        audioVolume: 50, // Volume padrão
-      });
-    } catch (err: any) {
-      console.error("Erro ao carregar assets:", err);
-
-      if (err.response?.status === 401) {
-        setError("Sessão expirada. Faça login novamente.");
-      } else if (err.response?.status === 404) {
-        // Usuário não tem configurações ainda
-        setAssets({
-          avatar: null,
-          background: null,
-          cursor: null,
-          audio: null,
-          audioVolume: 50,
-        });
-      } else {
-        setError("Erro ao carregar assets. Tente novamente.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadAssets();
-  }, [loadAssets]);
+    if (profileData) {
+      const loadedAssets = profileDataToAssets(profileData);
+      setAssets(prev => ({
+        ...loadedAssets,
+        audioVolume: prev.audioVolume, // Preservar volume do áudio
+      }));
+    }
+  }, [profileData]);
 
   // ═══════════════════════════════════════════════════════════
   // HANDLERS
   // ═══════════════════════════════════════════════════════════
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setError(null);
+    
+    try {
+      await refreshProfile();
+    } catch (err) {
+      console.error("Erro ao recarregar assets:", err);
+      setError("Erro ao recarregar assets.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshProfile]);
 
   const handleRemove = async (type: "avatar" | "background" | "cursor" | "audio") => {
     setIsSubmitting(true);
@@ -668,7 +676,9 @@ const DashboardAssets = () => {
         },
       });
 
-      setAssets((prev) => ({ ...prev, [type]: null }));
+      // Atualizar o contexto global após a remoção
+      await refreshProfile();
+
       setDeleteModal({ isOpen: false, type: null });
       setSuccessMessage(`${getAssetTitle(type)} removido com sucesso!`);
 
@@ -720,13 +730,50 @@ const DashboardAssets = () => {
     visible: { opacity: 1, y: 0 },
   };
 
-  // Loading State
-  if (isLoading) {
+  // Loading State - usa o estado do contexto
+  if (isLoadingProfile && !profileData) {
     return (
       <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
         <div className="text-center">
           <Loader2 size={48} className="mx-auto mb-4 animate-spin text-[var(--color-primary)]" />
           <p className="text-[var(--color-text-muted)]">Carregando assets...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state quando não há dados do perfil
+  if (!profileData) {
+    return (
+      <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <AlertCircle size={48} className="mx-auto mb-4 text-red-400" />
+          <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">
+            Erro ao carregar perfil
+          </h2>
+          <p className="text-[var(--color-text-muted)] mb-4">
+            Não foi possível carregar os assets do seu perfil.
+          </p>
+          <motion.button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="
+              flex items-center gap-2 px-4 py-2.5 mx-auto
+              rounded-[var(--border-radius-md)]
+              bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]
+              text-white font-medium text-sm
+              transition-all duration-300
+            "
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {isRefreshing ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <RefreshCw size={18} />
+            )}
+            Tentar Novamente
+          </motion.button>
         </div>
       </div>
     );
@@ -758,19 +805,20 @@ const DashboardAssets = () => {
           </h1>
 
           <motion.button
-            onClick={loadAssets}
-            disabled={isLoading}
+            onClick={handleRefresh}
+            disabled={isRefreshing || isLoadingProfile}
             className="
               p-2.5 rounded-[var(--border-radius-md)]
               bg-[var(--color-surface)] border border-[var(--color-border)]
               text-[var(--color-text-muted)] hover:text-[var(--color-text)]
               transition-all duration-300
+              disabled:opacity-50
             "
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Recarregar assets"
           >
-            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+            <RefreshCw size={18} className={(isRefreshing || isLoadingProfile) ? "animate-spin" : ""} />
           </motion.button>
         </motion.div>
       </div>

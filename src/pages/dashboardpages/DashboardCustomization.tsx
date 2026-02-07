@@ -1,6 +1,6 @@
-// pages/Customization/Customization.tsx
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useProfile } from "../../contexts/UserContext";
 import {
   Palette,
   ChevronRight,

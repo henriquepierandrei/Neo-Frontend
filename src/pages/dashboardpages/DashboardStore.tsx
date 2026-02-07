@@ -838,7 +838,7 @@ const FramePreview = ({
           <img
             src={profileImageUrl}
             alt="Preview do perfil"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover "
             onLoad={() => setIsLoading(false)}
             onError={() => {
               setProfileError(true);
@@ -2070,7 +2070,7 @@ const DashboardStore = () => {
                   key={item.id}
                   item={item}
                   userCoins={userCoins}
-                  userProfileImage={profileData?.profileImageUrl ?? "Usuário"}
+                  userProfileImage={profileData?.pageSettings?.mediaUrls?.profileImageUrl ?? "Usuário"}
                   onPreview={() => handlePreview(item)}
                   onPurchase={() => handlePurchaseClick(item)}
                   onEquip={() => handleEquip(item)}
@@ -2109,7 +2109,7 @@ const DashboardStore = () => {
                 item={selectedItem}
                 size="large"
                 showPlayButton={selectedItem.type === "effect"}
-                userProfileImage={profileData?.profileImageUrl ?? "Usuário"}
+                userProfileImage={profileData?.pageSettings?.mediaUrls?.profileImageUrl ?? "Usuário"}
               />
 
               {/* Badges */}
@@ -2309,7 +2309,7 @@ const DashboardStore = () => {
                 <ItemMediaPreview
                   item={selectedItem}
                   size="small"
-                  userProfileImage={profileData?.profileImageUrl ?? "Usuário"}
+                  userProfileImage={profileData?.pageSettings?.mediaUrls?.profileImageUrl ?? "Usuário"}
                 />
               </div>
               <div className="flex-1 min-w-0">

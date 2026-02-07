@@ -9,21 +9,75 @@ import {
 import { api } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
-interface SimpleProfileResponse {
-  profileImageUrl: string | null;
+// Interfaces para o novo formato de resposta
+interface CardSettings {
+  opacity: number;
+  blur: number;
+  color: string;
+  perspective: boolean;
+  hoverGrow: boolean;
+  rgbBorder: boolean;
+}
+
+interface ContentSettings {
+  biography: string;
+  biographyColor: string;
+  centerAlign: boolean;
+}
+
+interface NameEffects {
+  name: string;
+  neon: boolean;
+  shiny: boolean;
+  rgb: boolean;
+}
+
+interface MediaUrls {
+  backgroundUrl: string;
+  profileImageUrl: string;
+  musicUrl: string;
+  cursorUrl: string;
+}
+
+interface ParticlesSettings {
+  enabled: boolean;
+  color: string;
+}
+
+interface PageEffects {
+  snow: boolean;
+  confetti: boolean;
+  matrixRain: boolean;
+  particles: ParticlesSettings;
+}
+
+interface PageSettings {
+  isPremium: boolean;
+  cardSettings: CardSettings;
+  contentSettings: ContentSettings;
+  nameEffects: NameEffects;
+  mediaUrls: MediaUrls;
+  pageEffects: PageEffects;
+}
+
+interface ProfileResponse {
   url: string;
   name: string;
   createdAt: string;
-  premium: boolean;
+  isPremium: boolean;
   receiveGifts: boolean;
+  coins: number;
+  pageSettings: PageSettings;
 }
 
 interface ProfileContextData {
-  profileData: SimpleProfileResponse | null;
+  profileData: ProfileResponse | null;
   isLoadingProfile: boolean;
   profileImageError: boolean;
   setProfileImageError: (val: boolean) => void;
   refreshProfile: () => Promise<void>;
+  // Helper para acessar a URL da imagem de perfil mais facilmente
+  profileImageUrl: string | null;
 }
 
 const ProfileContext = createContext<ProfileContextData>(
@@ -32,16 +86,14 @@ const ProfileContext = createContext<ProfileContextData>(
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [profileData, setProfileData] = useState<SimpleProfileResponse | null>(
-    null
-  );
+  const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
       setIsLoadingProfile(true);
-      const response = await api.get<SimpleProfileResponse>("/user/profile");
+      const response = await api.get<ProfileResponse>("/user/profile");
       setProfileData(response.data);
       setProfileImageError(false);
     } catch (error) {
@@ -63,6 +115,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
   }, [user, profileData, fetchProfile]);
 
+  // Helper para acessar a URL da imagem de perfil
+  const profileImageUrl = profileData?.pageSettings?.mediaUrls?.profileImageUrl || null;
+
   return (
     <ProfileContext.Provider
       value={{
@@ -71,6 +126,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         profileImageError,
         setProfileImageError,
         refreshProfile: fetchProfile,
+        profileImageUrl,
       }}
     >
       {children}

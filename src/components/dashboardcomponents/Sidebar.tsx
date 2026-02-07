@@ -94,7 +94,7 @@ const Sidebar = () => {
 
   const displayName = profileData?.name || user?.name || "Usuário";
   const profileUrl = profileData?.url || user?.urlName || "usuario";
-  const profileImageUrl = profileData?.profileImageUrl ?? "Usuário";
+  const profileImageUrl = profileData?.pageSettings?.mediaUrls?.profileImageUrl || "Usuário";
 
 
   const navSections: NavSection[] = [
