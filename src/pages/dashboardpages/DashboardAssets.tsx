@@ -1,5 +1,5 @@
 // pages/Assets/Assets.tsx
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProfile } from "../../contexts/UserContext";
 import {
@@ -20,7 +20,6 @@ import {
   AlertCircle,
   CheckCircle,
   FileVideo,
-  HardDrive,
   Calendar,
   Maximize2,
   Copy,
@@ -975,11 +974,21 @@ const DashboardAssets = () => {
                   className="relative w-full h-40 rounded-[var(--border-radius-md)] overflow-hidden"
                   whileHover={{ scale: 1.02 }}
                 >
-                  <img
-                    src={assets.background.url}
-                    alt="Background"
-                    className="w-full h-full object-cover"
-                  />
+                  {assets.background.url.endsWith(".mp4") ? (
+                    <video
+                      src={assets.background.url}
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      loop
+                      muted
+                    />
+                  ) : (
+                    <img
+                      src={assets.background.url}
+                      alt="Background"
+                      className="w-full h-full object-cover"
+                    />
+                  )}  
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                   <motion.button
                     onClick={() => setViewModal({ isOpen: true, type: "background" })}
@@ -1086,17 +1095,23 @@ const DashboardAssets = () => {
         )}
 
         {viewModal.type === "background" && assets.background && (
-          <div className="space-y-4">
-            <img
-              src={assets.background.url}
-              alt="Background"
-              className="w-full h-auto rounded-[var(--border-radius-md)]"
-            />
-            <div className="text-center">
-              <p className="text-sm text-[var(--color-text)]">{getFileNameFromUrl(assets.background.url)}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">{getMimeTypeFromUrl(assets.background.url)}</p>
-            </div>
-          </div>
+          <>
+            {assets.background.url.endsWith(".mp4") ? (
+              <video
+                src={assets.background.url}
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+              />
+            ) : (
+              <img
+                src={assets.background.url}
+                alt="Background"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </>
         )}
 
         {viewModal.type === "cursor" && assets.cursor && (
